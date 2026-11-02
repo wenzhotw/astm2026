@@ -6,9 +6,13 @@
 
 ## 1. 專案一句話
 
-`index.html` 是一個**單一檔案、純前端**的課程作業繳交系統：學員寫個人心得（自動排成 A4 PDF）、組長上傳小組報告、組間互評、老師批改與下載。沒有後端，資料存在瀏覽器記憶體（`DB` 物件），重新整理就清空。
+課程作業繳交系統：學員寫個人心得（自動排成 A4 PDF）、組長上傳小組報告、組間互評、老師批改與下載。
 
-正式上線需要後端，規劃見 `docs/PRODUCTION.md`。需求與設計決定的來龍去脈見 `docs/REQUIREMENTS.md`。**改功能前先查 REQUIREMENTS.md，很多看起來奇怪的地方是使用者明確要求的。**
+同一份前端 `index.html` 有兩種模式，由 `BACKEND` 常數自動判斷：
+- **展示模式**（直接用瀏覽器開）：沒有 `google.script.run`，資料只在記憶體 `DB`。
+- **正式模式**（放進 Google Apps Script）：有 `google.script.run`，所有讀寫透過 `api()` 呼叫 `gas/Code.gs`，資料存在 Google 試算表和雲端硬碟。
+
+部署步驟見 `docs/DEPLOY.md`，後端設計見 `docs/PRODUCTION.md`。需求與設計決定的來龍去脈見 `docs/REQUIREMENTS.md`。**改功能前先查 REQUIREMENTS.md，很多看起來奇怪的地方是使用者明確要求的。**
 
 ---
 
@@ -31,13 +35,22 @@
 ## 3. 檔案結構
 
 ```
-index.html              整個系統（HTML＋CSS＋JS），用假名單、展示模式
-tools/build.py          把名單 CSV 和老師帳密套進 index.html，產生正式用網頁
+index.html              前端原始檔（HTML＋CSS＋JS），用假名單、展示模式。改前端只改這個檔
+gas/Code.gs             Apps Script 後端（試算表讀寫、登入、寄信、提醒排程）
+gas/index.html          由 index.html 產生（npm run build），不要手改
+gas/appsscript.json     Apps Script 設定（時區、網頁應用程式權限）
+tools/build.py          把名單 CSV 和老師帳密套進 index.html；--gas 產生 gas/index.html
 data/roster.example.csv 範例名單（假資料）
-tests/smoke.mjs         Playwright 煙霧測試
+tests/smoke.mjs         展示模式的煙霧測試
+tests/gas-mock.cjs      在 Node 模擬 SpreadsheetApp、DriveApp、MailApp 等 Google 服務
+tests/gas.mjs           正式模式整合測試：模擬 Google 環境跑 Code.gs＋gas/index.html 完整流程
+tests/fixtures/         測試用 PDF
 docs/REQUIREMENTS.md    需求紀錄與設計決定
-docs/PRODUCTION.md      正式版後端規劃
+docs/DEPLOY.md          部署教學
+docs/PRODUCTION.md      正式版後端設計
 ```
+
+**改完 `index.html` 一定要跑 `npm run build`**，讓 `gas/index.html` 同步，再 commit 兩個檔案。
 
 ---
 
@@ -49,6 +62,7 @@ docs/PRODUCTION.md      正式版後端規劃
 |---|---|
 | 設定、名單與示範資料 | `CONFIG`、`ROSTER`（由 build.py 產生）、`DB`、`loadSampleData()` 示範資料、`clearAllData()` |
 | 工具 | `$`、`$$`、`esc`、`fmtTime`、`fmtDue`、`syncEssay`、`statusPill`、大倒數 `bigCountdown()`、`PEER()` 互評開關 |
+| 後端連線 | `BACKEND`、`api(fn,payload)`、`call()`（含錯誤對話框）、`applySnap()` 把伺服器資料放進 `DB`、`reportBlob(g)` 抓小組報告 PDF、`bgRefresh()` 切換頁面時背景更新 |
 | 對話框與忙碌 | `dialog({title,body,buttons})` 回傳 Promise；`busy(msg,pct)` 全螢幕進度 |
 | 狀態與導覽 | `S` 畫面狀態、`go(tab,sel)` 直接切換、`nav(tab,sel)` 會檢查「未儲存」和「需要登入」 |
 | A4 排版引擎 | `layout()`／`layoutAt()` 算分頁、`renderPages()` 畫預覽 |
@@ -95,6 +109,18 @@ function bindXxx(){ $("#btn").onclick = ...; }     // 畫面放進 DOM 之後才
 | `settings` | `{deadline,peerOn}` | 截止時間（毫秒）、組間互評開關 |
 
 ---
+
+## 5.5 正式模式（Apps Script）怎麼運作
+
+- 每個會改資料的動作都長這樣：`if(BACKEND){ await call("後端函式", 參數) } else { 直接改 DB }`。新增功能時兩條路都要寫。
+- 後端唯一入口是 `Code.gs` 的 `api(fn, token, p)`，實際處理在物件 `H` 裡（`login`、`saveDraft`、`submitEssay`、`savePeer`、`submitFinal`、`uploadReport`、`getReport`、`gradeEssay`、`gradeGroup`、`saveSettings`、`refresh`、`publicInfo`）。
+- 權限檢查一律在後端：`student_()`、`teacher_()`、組長判斷、互評開關、七組都上傳才能送出等。前端隱藏按鈕只是介面。
+- `snapshot_(sess)` 決定前端拿得到什麼：學員只拿得到全班姓名與組別、自己的作業全文、同組的繳交狀態與互評、本組小組評分；老師拿全部。**手機號碼永遠不回傳。** 新增欄位時要想清楚誰該看到。
+- 登入用 `CacheService` 存 6 小時的 token，前端存在 `sessionStorage`，重新整理不會登出。
+- 草稿：本機 1.2 秒自動存，5 秒沒動作才送到伺服器，離開頁面時立刻送。
+- 個人作業 PDF 在瀏覽器產生（html2canvas＋jsPDF），base64 傳到後端存進雲端硬碟，並當作確認信附件。不要改成伺服器端產生 PDF，中文字型會壞。
+- 自動提醒信：`sendReminders()` 由每天 9 點的排程觸發，截止前三天、前一天寄給沒交的人，用 `PropertiesService` 記錄避免重寄。
+- 試算表結構（分頁名稱、欄位）定義在 `Code.gs` 最上面的 `SH`、`HEAD`。改欄位時，`rows_()` 是用標題名稱讀資料，所以**標題文字不能隨便改**。
 
 ## 6. 個人作業排版（最容易改壞的地方）
 
@@ -167,17 +193,21 @@ const LIMIT=1500;                    // 字數上限（在「工具」區塊，�
 ```bash
 npm install
 npx playwright install chromium
-npm test                      # 測 index.html
-node tests/smoke.mjs dist/index.html   # 測自己產生的正式版（測試用的帳密要改）
+npm run build      # index.html → gas/index.html
+npm test           # 兩組測試都跑
 ```
 
-`tests/smoke.mjs` 用範例名單的帳號登入，檢查：公開首頁、登入攔截、密碼錯誤、排版頁首、14pt、超過兩頁警告、老師登入、互評開關。新增功能時請一起補測試。
+- `tests/smoke.mjs`（展示模式）：公開首頁、登入攔截、密碼錯誤、排版頁首、14pt、超過兩頁警告、老師登入、互評開關。
+- `tests/gas.mjs`（正式模式）：初始化、名單檢查、草稿存雲端、繳交寫入試算表與雲端、確認信附 PDF、重新整理保持登入、組長上傳、個人互評、小組評分、老師評分、設定同步、作業說明儲存、提醒信只寄給沒交的人且不重寄。
+
+模擬環境不是真的 Google，部署到真的帳號後仍要照 `docs/DEPLOY.md` 第 11 步手動測一次（特別是 PDF 下載在 Apps Script 頁面裡是否正常）。新增功能時請一起補測試。
 
 ---
 
 ## 11. 已知限制與待辦
 
-- 沒有後端：資料不會保存、不會跨裝置共享；確認信只是模擬畫面。→ `docs/PRODUCTION.md`
-- 老師帳密和學員手機雜湊都在前端，懂技術的人可以繞過。正式版必須改成伺服器端驗證。
+- 展示模式沒有後端：資料不會保存；確認信只是模擬畫面。正式模式沒有這個問題。
+- 展示模式的老師帳密和學員手機雜湊都在前端，懂技術的人可以繞過，所以展示模式不能拿來正式收作業。正式模式在伺服器端驗證。
+- 正式模式在 Apps Script 的網頁裡，瀏覽器自動下載 PDF 的行為尚未在真實環境確認；就算沒有自動下載，確認信也會附 PDF。
 - 簡體字、全形英數會照原樣排版，沒有自動轉換。
 - 尚未做「組內成員 ABC 互評」（作業 3.8 提到第二次領袖營要用），見 REQUIREMENTS.md 的待辦。

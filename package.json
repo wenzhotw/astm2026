@@ -2,12 +2,20 @@
   "name": "astm2026",
   "version": "0.1.0",
   "private": true,
-  "description": "ASTM 2026 課程作業繳交系統（單一 HTML 檔前端原型）",
+  "description": "ASTM 2026 課程作業繳交系統（單一 HTML 前端＋Google Apps Script 後端）",
   "type": "module",
   "scripts": {
-    "test": "node tests/smoke.mjs index.html",
-    "build:example": "python3 tools/build.py --roster data/roster.example.csv --out index.html"
+    "test": "node tests/smoke.mjs index.html && node tests/gas.mjs",
+    "test:demo": "node tests/smoke.mjs index.html",
+    "test:gas": "node tests/gas.mjs",
+    "build": "python3 tools/build.py --roster data/roster.example.csv --out index.html && python3 tools/build.py --gas --out gas/index.html"
   },
-  "devDependencies": { "playwright": "^1.48.0" },
+  "devDependencies": {
+    "playwright": "^1.48.0",
+    "html2canvas": "1.4.1",
+    "jspdf": "2.5.1",
+    "jszip": "3.10.1",
+    "pdfjs-dist": "3.11.174"
+  },
   "license": "MIT"
 }

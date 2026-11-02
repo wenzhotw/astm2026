@@ -5,7 +5,10 @@
   # 公開範例（假名單、展示模式）：更新 repo 裡的 index.html
   python3 tools/build.py --roster data/roster.example.csv --out index.html
 
-  # 真實名單（只在自己電腦產生，不要 commit）
+  # 正式版（Google Apps Script）用的前端：名單不放在網頁裡，由試算表管理
+  python3 tools/build.py --gas --out gas/index.html
+
+  # 真實名單的單機版（只在自己電腦產生，不要 commit）
   python3 tools/build.py --roster data/roster.csv --out dist/index.html \
       --no-demo --teacher-id teacher --teacher-password 你的密碼
 
@@ -47,23 +50,30 @@ def load_roster(path):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--roster", required=True); ap.add_argument("--src", default="index.html")
+    ap.add_argument("--roster")
+    ap.add_argument("--gas", action="store_true", help="產生 Apps Script 用的 index.html（不含名單、正式模式）"); ap.add_argument("--src", default="index.html")
     ap.add_argument("--out", required=True); ap.add_argument("--no-demo", action="store_true")
     ap.add_argument("--teacher-id", default="teacher"); ap.add_argument("--teacher-password", default="1234")
     a = ap.parse_args()
-    roster, errors = load_roster(a.roster)
+    if a.gas:
+        roster, errors = [], []
+    elif not a.roster:
+        ap.error("請用 --roster 指定名單 CSV，或用 --gas 產生 Apps Script 版")
+    else:
+        roster, errors = load_roster(a.roster)
     if errors:
         print("名單有問題，請修正後再執行：", *errors, sep="\n  ", file=sys.stderr); sys.exit(1)
-    if a.no_demo and a.teacher_password == "1234":
+    if a.no_demo and not a.gas and a.teacher_password == "1234":
         print("正式模式請用 --teacher-password 設定自己的老師密碼", file=sys.stderr); sys.exit(1)
     src = Path(a.src).read_text(encoding="utf-8")
     i, j = src.index(BEGIN), src.index(END) + len(END)
-    cfg = {"demo": not a.no_demo, "teacherId": a.teacher_id,
-           "teacherPwHash": sha(f"teacher:{a.teacher_id}:{a.teacher_password}")}
+    cfg = {"demo": not a.no_demo and not a.gas, "teacherId": a.teacher_id,
+           "teacherPwHash": "" if a.gas else sha(f"teacher:{a.teacher_id}:{a.teacher_password}")}
     block = (f"{BEGIN}\nconst CONFIG={json.dumps(cfg, ensure_ascii=False)};\n"
              f"const ROSTER={json.dumps(roster, ensure_ascii=False)};\n{END}")
     out = Path(a.out); out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(src[:i] + block + src[j:], encoding="utf-8")
-    print(f"完成：{out}（{len(roster)} 人，{len({s['group'] for s in roster})} 組，{'展示' if cfg['demo'] else '正式'}模式）")
+    if a.gas: print(f"完成：{out}（Apps Script 版，名單由試算表管理）")
+    else: print(f"完成：{out}（{len(roster)} 人，{len({s['group'] for s in roster})} 組，{'展示' if cfg['demo'] else '正式'}模式）")
 
 if __name__ == "__main__": main()

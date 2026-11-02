@@ -11,7 +11,15 @@
 
 **要正式使用，照 [`docs/DEPLOY.md`](docs/DEPLOY.md) 一步一步部署，大約 20 分鐘。**
 
-> 目前狀態：正式版程式已完成，並在模擬的 Google 環境跑過完整流程測試（`npm run test:gas`）；第一次在真的 Google 帳號部署時，請照 DEPLOY.md 第 11 步自己再測一次。
+> 目前狀態：2026 年 11 月已在 Google Apps Script 正式上線，並實際測過繳交、自動下載 PDF、確認信與老師後台。
+
+| 連結 | 網址 |
+|---|---|
+| 正式版入口（給學員） | https://wenzhotw.github.io/astm2026/go/ |
+| 展示版（假資料，可隨意試用） | https://wenzhotw.github.io/astm2026/ |
+| 介紹影片（1 分 51 秒，英文旁白、中文字幕） | [`docs/media/ASTM2026_系統介紹.mp4`](docs/media/ASTM2026_系統介紹.mp4) |
+
+正式版入口是一個轉址頁（[`go/index.html`](go/index.html)），會自動跳到 Apps Script 的網址，因為 Apps Script 的網址太長、不好記。
 
 ---
 
@@ -114,6 +122,10 @@
   ```
 
 ---
+
+## 介紹影片
+
+[`docs/media/`](docs/media/) 裡有系統介紹影片和 SRT 字幕檔。影片是用程式自動做的：操作展示版錄畫面、合成英文旁白和背景音樂、燒入中文字幕，全程只用假名單。系統改版後想更新影片，見 [`tools/video/README.md`](tools/video/README.md)。
 
 ## 文件
 

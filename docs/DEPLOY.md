@@ -102,7 +102,7 @@
    - 誰可以存取：**所有人**
 4. 按「部署」，複製「網頁應用程式」的網址（`https://script.google.com/macros/s/……/exec`）。
 
-**這個網址就是給學員用的網址。** 可以做成短網址或 QR code。
+**這個網址就是給學員用的網址。** 網址太長的話，把它貼進 repo 的 `go/index.html`（檔案裡有三個地方），推上 GitHub 後，學員就能用 `https://<你的帳號>.github.io/astm2026/go/` 進入。要先在 repo 的 Settings → Pages 選 main 分支、`/ (root)` 開啟 GitHub Pages。也可以做成短網址或 QR code。
 
 ## 第 11 步：自己先測一次
 

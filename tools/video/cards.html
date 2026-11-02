@@ -1,0 +1,115 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+:root{--bg:#f4f1ea;--card:#fffdf8;--ink:#1f2a2e;--muted:#5d6a6e;--line:#ddd6c8;--accent:#1f5f5b;--warn:#b5462f;--gold:#b9862d}
+*{box-sizing:border-box}html,body{margin:0;width:1920px;height:1080px;overflow:hidden;font-family:"Noto Sans CJK TC",sans-serif;color:var(--ink);background:var(--bg)}
+.sc{display:none;position:absolute;inset:0}.sc.on{display:block}
+.tag{position:absolute;right:40px;top:34px;font-size:22px;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 18px}
+/* title */
+#title,#closing{background:linear-gradient(135deg,#1f5f5b,#143a37);color:#fff;text-align:center}
+#title .k,#closing .k{position:absolute;left:0;right:0;top:300px}
+#title h1{font-size:118px;margin:0;letter-spacing:.04em;font-weight:900}
+#title p{font-size:40px;margin:30px 0 0;opacity:.85}
+#title .pill{display:inline-block;margin-top:44px;border:2px solid rgba(255,255,255,.5);border-radius:999px;padding:10px 34px;font-size:30px}
+#closing h1{font-size:96px;margin:0;font-weight:900;line-height:1.35}
+#closing p{font-size:34px;opacity:.85;margin:40px 0 0}
+#closing .acct{display:inline-block;margin-top:46px;background:rgba(255,255,255,.14);border-radius:18px;padding:18px 40px;font-size:38px}
+/* pain */
+.doc{position:absolute;width:430px;height:600px;background:#fff;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:46px 40px;overflow:hidden;transition:none}
+.doc .t{text-align:center;margin-bottom:14px}
+.d1{left:50px;top:150px;transform:rotate(-4deg);font-family:"Noto Serif CJK TC";font-size:13px;line-height:1.35}
+.d1 .t{font-size:17px}
+.d2{left:500px;top:120px;transform:rotate(2deg);font-size:24px;line-height:1.5;font-family:"Noto Sans CJK TC";color:#1a3d8f}
+.d2 .t{font-size:30px;font-weight:900;color:#c00}
+.d3{left:950px;top:170px;transform:rotate(-1.5deg);font-size:16px;line-height:2.4;font-family:"Noto Sans CJK TC";font-weight:300}
+.d3 .t{font-size:22px;text-align:left;text-decoration:underline}
+.lbl{position:absolute;background:var(--warn);color:#fff;font-size:30px;font-weight:700;border-radius:14px;padding:8px 22px;box-shadow:0 6px 18px rgba(0,0,0,.2)}
+.ring{position:absolute;border:6px solid var(--warn);border-radius:50%}
+.bub{position:absolute;width:400px;background:#fff;border-radius:22px;padding:16px 22px;font-size:26px;box-shadow:0 6px 18px rgba(0,0,0,.12)}
+.bub small{display:block;color:var(--muted);font-size:20px}
+.hide{visibility:hidden}
+/* mail */
+.mailwrap{position:absolute;left:260px;top:90px;width:1400px;background:#fff;border-radius:24px;box-shadow:0 18px 50px rgba(0,0,0,.15);overflow:hidden}
+.mailhead{padding:36px 50px 26px;border-bottom:1px solid var(--line)}
+.mailhead h2{margin:0;font-size:44px}
+.from{display:flex;align-items:center;gap:20px;margin-top:22px;font-size:26px;color:var(--muted)}
+.av{width:62px;height:62px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:30px;font-weight:700}
+.mailbody{padding:30px 50px 40px;font-size:31px;line-height:1.75}
+.mailbody p{margin:0 0 16px}
+.att{display:inline-flex;align-items:center;gap:18px;border:2px solid var(--line);border-radius:16px;padding:16px 26px;font-size:28px;margin-top:6px}
+.att .ic{background:#c2452c;color:#fff;font-weight:900;border-radius:8px;padding:6px 10px;font-size:22px}
+.link{color:var(--accent);text-decoration:underline}
+/* repo */
+.repo{position:absolute;left:70px;top:70px;width:820px;background:#fff;border-radius:22px;box-shadow:0 14px 40px rgba(0,0,0,.12);overflow:hidden}
+.repo .hd{padding:30px 36px;border-bottom:1px solid var(--line)}
+.repo .hd .u{font-size:38px;font-weight:700}
+.repo .hd .b{display:inline-block;margin-top:12px;font-size:22px;border:1px solid var(--line);border-radius:999px;padding:3px 14px;color:var(--muted);margin-right:10px}
+.repo .f{display:flex;gap:18px;padding:13px 36px;border-bottom:1px solid #eee8dc;font-size:26px;font-family:"Noto Sans Mono CJK TC",monospace}
+.repo .f span{color:var(--muted);font-family:"Noto Sans CJK TC";font-size:23px;margin-left:auto}
+.repo .f.hl{background:#fff3cf}
+.md{position:absolute;left:940px;top:70px;width:910px;height:790px;background:#fff;border-radius:22px;box-shadow:0 14px 40px rgba(0,0,0,.12);padding:36px 46px;overflow:hidden;font-size:25px;line-height:1.7}
+.md h1{font-size:38px;margin:0 0 14px;border-bottom:1px solid var(--line);padding-bottom:12px}
+.md h3{font-size:28px;margin:22px 0 8px}
+.md ol{margin:0;padding-left:34px}.md li{margin-bottom:6px}
+.md code{background:#f1ede4;border-radius:6px;padding:1px 8px;font-size:22px}
+.ai{position:absolute;left:1180px;top:640px;background:var(--accent);color:#fff;border-radius:22px;padding:22px 30px;font-size:30px;box-shadow:0 10px 30px rgba(0,0,0,.25);width:620px}
+.ai small{display:block;opacity:.75;font-size:22px;margin-bottom:6px}
+</style></head><body>
+
+<section class="sc" id="title"><div class="k">
+  <h1>ASTM 2026<br>作業繳交系統</h1>
+  <p>高階策略人才管理領袖營｜課間作業</p>
+  <div class="pill">寫心得・交報告・互評・批改，一個網址搞定</div>
+</div></section>
+
+<section class="sc" id="pain">
+  <div class="doc d1 p1"><div class="t">課程反思心得</div>學號 114900021　姓名 徐建宏<br><br>這學期最大的收穫是學會從不同角度看同一個問題。過去我習慣只從自己的經驗出發，透過小組討論與課堂案例，我發現許多問題背後都有制度、文化與資源分配的因素。這讓我在工作上開始調整與團隊溝通的方式，也更願意先聽完再下判斷。<br><br>以我們小組研究的主題為例，一開始大家各有想法，討論常常陷入僵局。後來我們決定先各自蒐集資料，再放在一起比對，才發現彼此的觀點其實可以互補。合作不是要求每個人想法一致，而是讓不同的想法被聽見。<br><br>此外，老師在課堂上提到的幾個觀念，也讓我重新思考自己未來的方向。專業能力固然重要，但能不能清楚表達、理解他人的需求，往往才是推動一件事的關鍵。</div>
+  <div class="doc d2 p2"><div class="t">心得報告！！</div>第3組 郭雨萱<br>這次領袖營讓我印象最深的是策略與人才要一起看。我們公司過去先定策略再找人，常常找不到對的人……</div>
+  <div class="doc d3 p3"><div class="t">第一次領袖營學習反思</div>這次課程中，我對人才管理有了新的體會。領導者的角色不只是分配工作，更重要的是看見每個人的長處，讓團隊在變動中仍然有方向。小組討論時，大家來自不同產業，看事情的角度很不一樣……</div>
+  <div class="ring r1 p3" style="left:1070px;top:200px;width:300px;height:110px"></div>
+  <div class="lbl p3" style="left:1190px;top:118px">沒寫名字？</div>
+  <div class="lbl p2" style="left:560px;top:72px">字型、大小都不同</div>
+  <div class="bub b1" style="top:260px;left:1470px"><small>第 2 組 LINE</small>第3組我給 85 分</div>
+  <div class="bub b1" style="top:400px;left:1470px"><small>第 2 組 LINE</small>組長，評分表要填哪一格？</div>
+  <div class="bub b1" style="top:540px;left:1470px"><small>Email</small>附件：心得（最終版）(2).docx</div>
+</section>
+
+<section class="sc" id="remind"><div class="tag">提醒信示意畫面</div>
+  <div class="mailwrap"><div class="mailhead"><h2>【提醒】個人反思心得還有 3 天截止</h2>
+    <div class="from"><div class="av">A</div><div><b style="color:var(--ink)">ASTM 2026 作業繳交系統</b><br>寄給：林雅婷</div></div></div>
+  <div class="mailbody"><p>林雅婷 同學你好：</p><p>個人反思心得將在 <b>2026/11/22 23:00</b> 截止，系統顯示你還沒有繳交。</p><p>登入系統直接打字即可，會自動排版成 A4：<br><span class="link">（作業系統網址）</span></p><p>帳號是學號，密碼是手機號碼。</p></div></div>
+</section>
+
+<section class="sc" id="confirm"><div class="tag">確認信示意畫面</div>
+  <div class="mailwrap"><div class="mailhead"><h2>【作業繳交確認】第1組 林雅婷 個人作業 v1</h2>
+    <div class="from"><div class="av">A</div><div><b style="color:var(--ink)">ASTM 2026 作業繳交系統</b><br>寄給：林雅婷</div></div></div>
+  <div class="mailbody"><p>林雅婷 同學你好：</p><p>系統已收到你的個人作業（第 1 版），共 1,186 字。排版好的 PDF 附在這封信裡。</p><p>需要修改的話，可以再登入系統重新繳交，老師會以最新版本為準。</p>
+  <div class="att"><span class="ic">PDF</span>第1組_林雅婷_114900004_v1.pdf</div></div></div>
+</section>
+
+<section class="sc" id="repo">
+  <div class="repo"><div class="hd"><div class="u">wenzhotw / astm2026</div><span class="b">公開</span><span class="b">MIT 授權</span><span class="b">github.com/wenzhotw/astm2026</span></div>
+    <div class="f">📄 index.html<span>網頁本體，單一檔案</span></div>
+    <div class="f">📁 gas/<span>Google Apps Script 後端</span></div>
+    <div class="f">📁 tools/<span>名單匯入工具</span></div>
+    <div class="f">📁 tests/<span>自動測試</span></div>
+    <div class="f">📁 docs/<span>部署 12 步、需求說明</span></div>
+    <div class="f hl">📘 AGENTS.md<span>給 AI 讀的開發說明</span></div>
+    <div class="f">📗 README.md<span>給人看的使用說明</span></div>
+  </div>
+  <div class="md"><h1>AGENTS.md：給 AI 助理與開發者的說明</h1>
+    這份文件寫給之後接手的助教，以及助教使用的 AI 助理。動手改之前請先讀完。
+    <h3>一定要遵守的規則</h3>
+    <ol><li>不准把真實個資放進 repo，名單只用 <code>tools/build.py</code> 產生</li><li>介面文字用繁體中文、全形標點</li><li>使用者是 EMBA 學員和老師，字要大、用白話</li><li>保持單一 HTML 檔</li><li>改完一定跑 <code>npm test</code></li></ol>
+    <h3>常見修改</h3>換新一屆名單、改截止時間、改作業說明……</div>
+  <div class="ai"><small>下一屆助教對 AI 說</small>「請讀 AGENTS.md，幫我換成 2027 的名單和題目」</div>
+</section>
+
+<section class="sc" id="closing"><div class="k">
+  <h1>把文書工作交給系統<br>讓學習回到內容本身</h1>
+  <div class="acct">登入帳號：學號　｜　密碼：手機號碼</div>
+  <p>ASTM 2026 作業繳交系統　·　開源於 github.com/wenzhotw/astm2026</p>
+</div></section>
+<script>
+function show(id,step){document.querySelectorAll(".sc").forEach(s=>s.classList.toggle("on",s.id===id));
+  if(id==="repo"){document.querySelector(".md").classList.toggle("hide",step<2);document.querySelector(".ai").classList.toggle("hide",step<3)}
+  if(id==="pain"){for(const k of ["p1","p2","p3","b1"]){const n=+k.slice(1);document.querySelectorAll("."+k).forEach(e=>e.classList.toggle("hide",k==="b1"?step<4:n>step))}}}
+</script></body></html>

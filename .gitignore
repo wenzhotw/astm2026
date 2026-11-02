@@ -10,3 +10,9 @@ node_modules/
 .DS_Store
 test-results/
 playwright-report/
+
+# 影片製作的中間檔與語音模型
+tools/video/frames/
+tools/video/cards/
+tools/video/out/
+tools/video/models/

@@ -49,7 +49,12 @@ tests/fixtures/         測試用 PDF
 docs/REQUIREMENTS.md    需求紀錄與設計決定
 docs/DEPLOY.md          部署教學
 docs/PRODUCTION.md      正式版後端設計
+docs/media/             系統介紹影片與 SRT 字幕
+go/index.html           正式版入口轉址頁（GitHub Pages 的 /go/），裡面寫著 Apps Script 網址
+tools/video/            介紹影片製作工具（錄展示版畫面、英文旁白、配樂、字幕），見其中的 README
 ```
+
+**重新部署 Apps Script 時一律用「管理部署作業 → 編輯 → 新版本」**，網址才不會變。如果網址真的變了，要同步改 `go/index.html` 裡的三個網址。
 
 **改完 `index.html` 一定要跑 `npm run build`**，讓 `gas/index.html` 同步，再 commit 兩個檔案。
 

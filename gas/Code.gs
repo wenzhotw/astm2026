@@ -17,7 +17,7 @@ const TZ = 'Asia/Taipei';
 
 const SH = {
   roster: '學生名單', essays: '個人作業', drafts: '草稿', peer: '個人互評',
-  finals: '小組互評', reports: '小組報告', grades: '老師評分', settings: '設定'
+  finals: '小組互評', reports: '小組報告', grades: '老師評分', settings: '設定', history: '互評紀錄'
 };
 const HEAD = {
   roster: ['組別', '學號', '姓名', 'Email', '手機', '是否組長'],
@@ -27,7 +27,8 @@ const HEAD = {
   finals: ['評分組', '被評組', '分數', '名次', '評語', '整體評語', '送出人', '送出時間'],
   reports: ['組別', '檔案ID', '檔名', '原始檔名', '頁數', '上傳人', '上傳時間'],
   grades: ['類型', '對象', '分數', '評語', '更新時間'],
-  settings: ['項目', '值', '說明']
+  settings: ['項目', '值', '說明'],
+  history: ['次數', '名稱', '結果（系統用，請不要手改）', '封存時間']
 };
 const DEFAULT_SETTINGS = [
   ['截止時間', '2026-11-22 23:00', '格式：YYYY-MM-DD HH:mm（台北時間）'],
@@ -37,7 +38,10 @@ const DEFAULT_SETTINGS = [
   ['老師密碼', '請改成你自己的密碼', '老師登入用，部署前一定要改'],
   ['作業說明', '', '由系統後台編輯，請不要手動改這格'],
   ['寄件人名稱', 'ASTM 課程助教', '確認信與提醒信的寄件人名稱'],
-  ['檔案資料夾ID', '', '初始化時自動建立']
+  ['檔案資料夾ID', '', '初始化時自動建立'],
+  ['目前互評次數', '2', '第幾次組間互評。老師在後台按「結束這次互評」時會自動加 1；第 1 次的結果已內建在網頁裡'],
+  ['全學期互評次數', '3', ''],
+  ['老師通知信箱', '', '七組都上傳簡報、七組都送出互評時，自動寄信到這裡（多個用逗號隔開）。可在網頁後台修改']
 ];
 
 // ================= 網頁入口 =================
@@ -132,7 +136,7 @@ function api(fn, token, p) {
 
 const H = {
   publicInfo() {
-    return { snapshot: { settings: publicSettings_(), brief: brief_() } };
+    return { snapshot: { settings: publicSettings_(), brief: brief_(), history: history_() } };
   },
 
   login(p) {
@@ -242,6 +246,7 @@ const H = {
       const now = new Date();
       GROUPS.forEach(g => sh.appendRow([s.group, g, Math.round(Number(p.scores[g])), Number(p.ranks[g]),
         String((p.comments || {})[g] || ''), String(p.overall || ''), s.name, now]));
+      notifyTeacher_('finals');
       return { ok: true, snapshot: snapshot_(sess) };
     });
   },
@@ -265,6 +270,7 @@ const H = {
       const file = subFolder_('小組報告').createFile(blob);
       const vals = [[s.group, file.getId(), name, String(p.orig || ''), Number(p.pages) || '', s.name, new Date()]];
       if (r) sh.getRange(r, 1, 1, 7).setValues(vals); else sh.appendRow(vals[0]);
+      notifyTeacher_('reports');
       return { ok: true, snapshot: snapshot_(sess) };
     });
   },
@@ -294,8 +300,30 @@ const H = {
     if (p.peerOn != null) setSetting_('組間互評', p.peerOn ? '開' : '關');
     if (p.remindOn != null) setSetting_('自動提醒信', p.remindOn ? '開' : '關');
     if (p.brief != null) setSetting_('作業說明', p.brief ? JSON.stringify(p.brief) : '');
+    if (p.notifyEmail != null) setSetting_('老師通知信箱', String(p.notifyEmail).trim());
     return { ok: true, snapshot: snapshot_(sess) };
   }
+};
+
+// 結束這一次互評：把各組送出的小組評分封存到「互評紀錄」（不留個人評分），
+// 清空個人互評、小組互評，簡報移到「小組報告舊版」，次數加 1
+H.endRound = function (p, sess) {
+  teacher_(sess);
+  return withLock_(() => {
+    const S = settings_(), cur = S.peerRound;
+    if (cur >= S.peerRounds) return { error: `全學期共 ${S.peerRounds} 次互評，已經是最後一次` };
+    const R = finalsResult_();
+    let hs = sheet_(SH.history);
+    if (!hs) { hs = SpreadsheetApp.getActiveSpreadsheet().insertSheet(SH.history); hs.appendRow(HEAD.history); hs.setFrozenRows(1); }
+    hs.appendRow([cur, `第 ${cur} 次小組作業互評`, JSON.stringify({ ranks: R.ranks, scores: R.scores, comments: R.comments, overall: R.overall, at: R.at }), new Date()]);
+    const clear = name => { const sh = sheet_(name); for (let r = sh.getLastRow(); r >= 2; r--) sh.deleteRow(r); };
+    rows_(SH.reports).forEach(r => {
+      try { const f = DriveApp.getFileById(String(r['檔案ID'])); f.setName(`第${cur}次_第${r['組別']}組_簡報.pdf`); f.moveTo(subFolder_('小組報告舊版')); } catch (e) { console.error(e); }
+    });
+    clear(SH.peer); clear(SH.finals); clear(SH.reports);
+    setSetting_('目前互評次數', String(cur + 1));
+    return { ok: true, snapshot: snapshot_(sess) };
+  });
 };
 
 // ================= 回傳給前端的資料 =================
@@ -307,7 +335,7 @@ function snapshot_(sess) {
   const me = isT ? null : R.find(x => x.id === sess.id);
   const sameGroup = id => { const x = R.find(r => r.id === id); return me && x && x.group === me.group; };
   const snap = { students: R.map(s => publicStudent_(s, isT || (me && s.id === me.id))), versions: {}, drafts: {},
-    pdfs: {}, peer: {}, finals: {}, tEssay: {}, tGroup: {}, settings: publicSettings_(), brief: brief_() };
+    pdfs: {}, peer: {}, finals: {}, tEssay: {}, tGroup: {}, settings: publicSettings_(isT), brief: brief_(), history: history_() };
 
   rows_(SH.essays).sort((a, b) => a['版本'] - b['版本']).forEach(r => {
     const id = String(r['學號']);
@@ -424,9 +452,68 @@ function settings_() {
   const d = getSetting_('截止時間').replace(/\//g, '-');
   const m = d.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:\s+(\d{1,2}):(\d{2}))?/);
   const deadline = m ? Date.parse(`${m[1]}-${('0' + m[2]).slice(-2)}-${('0' + m[3]).slice(-2)}T${('0' + (m[4] || 23)).slice(-2)}:${m[5] || '00'}:00+08:00`) : Date.now() + 7 * 864e5;
-  return { deadline, peerOn: getSetting_('組間互評') !== '關', remindOn: getSetting_('自動提醒信') !== '關' };
+  return { deadline, peerOn: getSetting_('組間互評') !== '關', remindOn: getSetting_('自動提醒信') !== '關',
+    peerRound: Number(getSetting_('目前互評次數')) || 2, peerRounds: Number(getSetting_('全學期互評次數')) || 3 };
 }
-function publicSettings_() { return settings_(); }
+function publicSettings_(isT) { const o = settings_(); if (isT) o.notifyEmail = getSetting_('老師通知信箱'); return o; }
+// 已結束的互評（只有小組層級：名次、分數、評語），每個人都能看
+function history_() {
+  const h = {};
+  rows_(SH.history).forEach(r => { try { h[Number(r['次數'])] = Object.assign({ title: String(r['名稱']) }, JSON.parse(r['結果（系統用，請不要手改）'])); } catch (e) {} });
+  return h;
+}
+function finalsResult_() {
+  const R = { ranks: {}, scores: {}, comments: {}, overall: {}, at: {} };
+  rows_(SH.finals).forEach(r => {
+    const g = Number(r['評分組']), t = Number(r['被評組']);
+    (R.ranks[g] = R.ranks[g] || {})[t] = Number(r['名次']);
+    (R.scores[g] = R.scores[g] || {})[t] = Number(r['分數']);
+    if (r['評語']) (R.comments[g] = R.comments[g] || {})[t] = String(r['評語']);
+    R.overall[g] = String(r['整體評語'] || ''); R.at[g] = ms_(r['送出時間']);
+  });
+  return R;
+}
+// 依各組給的名次取平均，算出綜合排名
+function ranking_(R) {
+  return GROUPS.map(t => {
+    const rk = GROUPS.map(g => R.ranks[g] && R.ranks[g][t]).filter(x => x != null);
+    const sc = GROUPS.map(g => R.scores[g] && R.scores[g][t]).filter(x => x != null);
+    return { t, avgRank: rk.length ? rk.reduce((a, b) => a + b, 0) / rk.length : 99, avgScore: sc.length ? sc.reduce((a, b) => a + b, 0) / sc.length : 0 };
+  }).sort((a, b) => a.avgRank - b.avgRank || b.avgScore - a.avgScore);
+}
+
+// ================= 自動通知老師 =================
+// 七組都上傳簡報、七組都送出小組互評時各寄一次（每一次互評各一次）
+function notifyTeacher_(kind) {
+  const to = getSetting_('老師通知信箱'); if (!to) return;
+  const round = settings_().peerRound, key = `notify_${kind}_r${round}`;
+  const props = PropertiesService.getScriptProperties();
+  if (props.getProperty(key)) return;
+  const url = ScriptApp.getService().getUrl(), name = getSetting_('寄件人名稱') || APP_TITLE;
+  let subject, html;
+  if (kind === 'reports') {
+    if (!GROUPS.every(g => reportsMap_()[g])) return;
+    const folder = subFolder_('小組報告');
+    to.split(/[,，\s]+/).filter(Boolean).forEach(e => { try { folder.addViewer(e); } catch (err) { console.error('share', e, err); } });
+    const list = GROUPS.map(g => { const f = DriveApp.getFileById(reportsMap_()[g].fileId); return `<li><a href="${f.getUrl()}">${esc_(f.getName())}</a></li>`; }).join('');
+    subject = `【ASTM】七組簡報都已上傳（第 ${round} 次）`;
+    html = `<p>老師您好：</p><p>七組的小組簡報都已經上傳完成，可以開始看各組報告了。</p>
+      <p><b>雲端資料夾：</b><a href="${folder.getUrl()}">小組報告</a></p><ul>${list}</ul>
+      <p>也可以登入作業系統的「小組報告評分」直接看並評分：<br><a href="${url}">${url}</a></p>`;
+  } else {
+    const R = finalsResult_();
+    if (!GROUPS.every(g => R.ranks[g])) return;
+    const rows = ranking_(R).map((x, i) => `<tr><td style="padding:4px 12px">第 ${i + 1} 名</td><td style="padding:4px 12px">第 ${x.t} 組</td><td style="padding:4px 12px;text-align:right">平均名次 ${Math.round(x.avgRank * 100) / 100}</td><td style="padding:4px 12px;text-align:right">平均 ${Math.round(x.avgScore * 10) / 10} 分</td></tr>`).join('');
+    subject = `【ASTM】七組都已送出第 ${round} 次小組互評`;
+    html = `<p>老師您好：</p><p>七組都已經送出第 ${round} 次小組互評，綜合排名如下（依各組給的名次取平均，數字越小越好）：</p>
+      <table style="border-collapse:collapse;border:1px solid #ddd">${rows}</table>
+      <p>各組給的名次、分數與評語，請登入作業系統的「互評結果」查看：<br><a href="${url}">${url}</a></p>`;
+  }
+  try {
+    MailApp.sendEmail({ to, subject, htmlBody: html + `<p style="color:#888">${esc_(name)}（系統自動寄出）</p>`, name });
+    props.setProperty(key, String(Date.now()));
+  } catch (e) { console.error('notify', e); }
+}
 function brief_() { const j = getSetting_('作業說明'); if (!j) return null; try { return JSON.parse(j); } catch (e) { return null; } }
 function reportsMap_() { const m = {}; rows_(SH.reports).forEach(r => { m[Number(r['組別'])] = { fileId: String(r['檔案ID']), name: String(r['檔名']) }; }); return m; }
 function rootFolder_() { return DriveApp.getFolderById(getSetting_('檔案資料夾ID')); }

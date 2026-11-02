@@ -34,11 +34,11 @@ function createGas(codePath) {
   };
   const iter = arr => { let i = 0; return { hasNext: () => i < arr.length, next: () => arr[i++] }; };
   function mkFolder(name, parent) {
-    const f = { id: nid("F"), name, parent, getId() { return this.id; },
+    const f = { id: nid("F"), name, parent, viewers: [], getId() { return this.id; }, getUrl() { return "https://drive.google.com/drive/folders/" + this.id; }, addViewer(e) { this.viewers.push(e); return this; },
       createFolder(n) { return mkFolder(n, this); },
       getFoldersByName(n) { return iter([...folders.values()].filter(x => x.parent === this && x.name === n)); },
       createFile(blob) { const id = nid("D"); const file = { id, name: blob.getName(), bytes: blob.getBytes(), folder: this,
-        getId() { return id; }, getBlob() { return mkBlob(this.bytes, "application/pdf", this.name); },
+        getId() { return id; }, getName() { return this.name; }, getUrl() { return "https://drive.google.com/file/d/" + id; }, getBlob() { return mkBlob(this.bytes, "application/pdf", this.name); },
         setName(n) { this.name = n; }, moveTo(f2) { this.folder = f2; } }; files.set(id, file); return file; } };
     folders.set(f.id, f); return f;
   }
@@ -68,6 +68,6 @@ function createGas(codePath) {
   };
   vm.createContext(ctx);
   vm.runInContext(fs.readFileSync(codePath, "utf8") + "\nthis.api=api;this.setup=setup;this.sendReminders=sendReminders;this.checkRoster=checkRoster;", ctx);
-  return { ctx, sheets, files, mails, props, Sheet };
+  return { ctx, sheets, files, folders, mails, props, Sheet };
 }
 module.exports = { createGas };

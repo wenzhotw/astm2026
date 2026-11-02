@@ -82,6 +82,8 @@ td.num,th.num{text-align:center}
 .field input,.field textarea,.input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:18px}
 .field input:focus,.field textarea:focus,.input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
 .err{color:var(--warn);min-height:1.6em;font-weight:500}
+.demo-pick{display:grid;gap:10px;margin:10px 0}.demo-pick button{font:inherit;text-align:left;border:2px solid var(--line);background:var(--card);border-radius:14px;padding:12px 16px;cursor:pointer;color:var(--ink)}
+.demo-pick button:hover{border-color:var(--accent);background:var(--accent-soft)}.demo-pick b{display:block;font-size:18px}.demo-pick span{font-size:15px;color:var(--muted)}
 .demo-accts{margin-top:22px;border-top:1px dashed var(--line);padding-top:14px;font-size:15px}
 .demo-accts button{width:100%;justify-content:flex-start;margin:6px 0}
 
@@ -153,6 +155,12 @@ textarea.cmt{width:100%;min-height:80px;padding:10px;border:1px solid var(--line
 .matrix td.num input{width:80px;text-align:center;padding:6px;font-size:18px;font-weight:700;border:1px solid var(--line);border-radius:6px}
 .matrix tr.avg td{background:var(--soft);font-weight:700}
 .matrix tr.final td{background:var(--accent-soft);font-weight:700}
+.rk-d0{background:#dcefdc}.rk-d1{background:#eef6e6}.rk-d2{background:#fbf1d6}.rk-d3{background:#f8e2c8}.rk-d4{background:#f6d3c6}.rk-d5{background:#efbcae}
+.rounds{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}.rounds button{font:inherit;font-size:17px;padding:10px 18px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;text-align:left}
+.rounds button.on{border-color:var(--accent);background:var(--accent-soft)}.rounds button small{display:block;font-size:14px;color:var(--muted)}
+.podium{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:18px}.podium>div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 8px;text-align:center}
+.podium .p{font-size:15px;color:var(--muted)}.podium .g{font-size:22px;font-weight:700;margin:2px 0}.podium .s{font-size:14px;color:var(--muted)}.podium>div:first-child{border:2px solid var(--gold);background:var(--gold-soft)}
+@media (max-width:760px){.podium{grid-template-columns:repeat(4,1fr)}}
 .mine td{background:#fffbe9}
 .cell-empty{color:#bbb}
 .rank-list{display:flex;flex-direction:column;gap:8px}
@@ -358,8 +366,13 @@ const SAMPLE=[
 "總結來說，這門課不只讓我學到知識，更讓我學會反思。我希望未來能把這些經驗帶到其他課程與生活中，持續練習從多元角度思考，並且在團隊中扮演更積極的角色。"];
 const COMMENTS=["架構清楚，但數據來源可以再補充","上台表達很流暢","提案很有創意，可行性要再評估","","投影片字太小，後排看不清楚",""];
 const DB={students:[],essays:{},versions:{},drafts:{},pdfs:{},peer:{},finals:{},tEssay:{},tGroup:{},
-  settings:{deadline:new Date(2026,10,22,23,0,0).getTime(),peerOn:true}};
+  settings:{deadline:new Date(2026,10,22,23,0,0).getTime(),peerOn:true,peerRound:2}};
 const PEER=()=>DB.settings.peerOn!==false;
+// 互評分好幾次（第 1、2、3 次）。PR() 是目前進行中的那一次；已結束的只保留小組層級的結果，不留個人評分
+const PEER_ROUNDS=3;
+const PR=()=>DB.settings.peerRound||2;
+// 第 1 次互評在系統上線前已完成，結果由各組繳交的互評檔整理匯入（只有小組層級資料）
+DB.history={1:{"title": "第 1 次小組作業互評", "ranks": {"1": {"1": 1, "2": 6, "3": 2, "4": 7, "5": 3, "6": 5, "7": 4}, "2": {"1": 6, "2": 2, "3": 1, "4": 4, "5": 7, "6": 3, "7": 5}, "3": {"1": 5, "2": 6, "3": 1, "4": 7, "5": 2, "6": 3, "7": 4}, "4": {"1": 5, "2": 6, "3": 1, "4": 4, "5": 3, "6": 2, "7": 7}, "5": {"1": 5, "2": 4, "3": 3, "4": 7, "5": 2, "6": 1, "7": 6}, "6": {"1": 3, "2": 6, "3": 1, "4": 7, "5": 4, "6": 2, "7": 5}, "7": {"1": 5, "2": 7, "3": 1, "4": 6, "5": 4, "6": 2, "7": 3}}, "scores": {"1": {"1": 95, "2": 90, "3": 94, "4": 89, "5": 93, "6": 90.5, "7": 91}, "2": {"1": null, "2": null, "3": null, "4": null, "5": null, "6": null, "7": null}, "3": {"1": 82, "2": 83, "3": 93, "4": 82, "5": 87, "6": 85, "7": 85}, "4": {"1": 84.5, "2": 84.3, "3": 91.5, "4": 87.5, "5": 89.3, "6": 90.3, "7": 84.2}, "5": {"1": 88, "2": 88.17, "3": 90, "4": 86, "5": 90.33, "6": 91.33, "7": 88.33}, "6": {"1": 90.17, "2": 87.33, "3": 91.17, "4": 86.17, "5": 88.5, "6": 90.83, "7": 88.33}, "7": {"1": 87, "2": 81, "3": 91, "4": 85, "5": 88, "6": 90, "7": 89}}, "best": {"1": "內容完整、架構清晰，整合案例、個人反思與團隊學習成果，充分展現共同成長。", "2": "分析完整、轉化能力強，能把案例洞察進一步整理成清楚、有系統、可落地的管理判斷。", "3": "整合企業個案與核心智慧：將企業個案與國學智慧／核心理論有機整合；架構嚴謹與視覺專業度：報告架構完整、論述脈絡清晰，圖文排版美觀易讀；帶入實務經驗與高度落地性：結合組員個人實戰經驗與深入剖析，跳脫純概念堆砌。", "4": "具備邏輯閉環，明確區分「當時決策條件／已知資訊」與「事後觀點」，將背景、人才、架構串聯成管理系統；結合授課教授相關報導，展現團隊反思並轉化為行動方案；易讀性高，切入 PE、SWA 等多元視角，結構層次分明。（第四組對領先組別第三、六、五組的共同評語）", "5": "數據分析連結實務反思，報告易讀，也看得到團隊交流。", "6": "多數肯定國學與數據的整合及真實反思，兼具分析深度與行動價值，六人平均最高。", "7": "以數據與國學把案例、電影、備課作業串成同一套邏輯，團隊反思也能對自己的滿分「玩真的」。"}, "worst": {"1": "內容豐富且具創意，惟部分頁面文字密集、字體偏小及排版繁複，影響閱讀效率。", "2": "內容有投入，但整體架構與版面收斂較弱，可讀性與主軸聚焦相對不足。", "3": "資訊堆疊過載與版面混亂：資訊量雖多但缺乏結構化整理，格式不統一，降低閱讀流暢度；內容制式偏中淺、缺乏深度：論述停留於表面框架敘述，缺乏個人洞察或小組的深度反思；易讀性差且焦點不鮮明：未能引導讀者抓住核心重點，論述與圖表未能有效銜接。", "4": "論述偏一般性，缺乏個案消化後的統整，跨章節因果關聯未深入剖析；過度依賴 AI，缺少組員思辨與相互激盪；排版文字過密、缺乏重點指引。（第四組對落後組別第四、一、二、七組的共同評語）", "5": "個別回饋認為較偏重個案分析，可補充更多支持論點。", "6": "雖內容與框架完整，但文字密集影響易讀性，改善方案的時程與責任仍待具體化。", "7": "案例正文扎實，但各附件的呈現與深度不一致，整體性與融合度未能與正文同步。"}, "basis": {"1": "小組定分", "2": "僅有名次，無小組分數", "3": "組長綜合評分", "4": "團體評分分數", "5": "原始均分", "6": "六人平均分數", "7": "小組綜合評分"}, "note": "各組計分口徑不同（組長定分、成員平均等），平均分數僅供參考，排名以平均名次為主。第二組只提供名次。"}};
 DB.students=ROSTER.map(r=>({...r}));
 if(CONFIG.demo){const b=document.getElementById("demoBar");b.hidden=false;b.textContent="展示模式：資料只存在這個瀏覽器分頁裡，重新整理就會清空"}
 // 測試用：填入示範資料（老師後台按鈕觸發）
@@ -384,7 +397,31 @@ function loadSampleData(){
     DB.peer[s.id]={};
     for(let g=1;g<=7;g++) if(g!==6&&s.group!==6) DB.peer[s.id][g]={score:rnd(72,95,idx*7+g),comment:COMMENTS[(idx+g)%6]};
   });
+  // 示範：第 2、3、4、5、7 組組長已送出小組評分（第 1 組還沒，第 6 組沒上傳）
+  [2,3,4,5,7].forEach(g=>{const scores={},ranks={},comments={};
+    ALLG.map(t=>[t,rnd(78,95,g*13+t)]).sort((a,b)=>b[1]-a[1]).forEach(([t,v],i)=>{scores[t]=v;ranks[t]=i+1;comments[t]=COMMENTS[(g+t)%6]});
+    DB.finals[g]={scores,ranks,comments,overall:["各組水準接近，主要看論點是否有資料支撐","第 3 組的架構最完整","建議各組控制簡報時間"][g%3],at:Date.now()-g*3600e3}});
 }
+// 展示模式的三種體驗身分：組員、組長、老師
+const DEMO_ESSAY=["參加第一次領袖營之前，我以為策略和人才是兩件分開的事：策略由高層制定，人才由人資部門負責招募與培訓。三天的課程讓我徹底改變這個想法。老師在課堂上反覆強調，策略能不能落地，取決於有沒有對的人在對的位置上，而人才能不能發揮，也取決於策略是否給了他清楚的方向。這兩者其實是一體兩面。", "課程中最讓我印象深刻的是 Netflix 的案例。Netflix 用極高的自由度換取員工的高度責任感，並且願意用優渥的資遣方案，讓不再適合的人離開。一開始我覺得這種做法太過冷酷，但在小組討論後，我發現它背後是一套非常一致的邏輯：公司要的是能在快速變動的市場中自己做判斷的人，所以它的制度設計全部圍繞著這個目標。真正讓我反思的，不是要不要學 Netflix，而是我們自己的組織有沒有這樣一致的邏輯。", "課堂上老師也提醒我們，看案例時要分清楚當時的決策條件和事後的觀點。很多決策事後看來理所當然，但在當下資訊有限、壓力很大的情況下，能做出判斷本身就很不容易。這讓我學會用更謙虛的態度看待別人的決定。", "對照華為的案例，我看到另一種截然不同的路徑。華為透過嚴格的考核、輪調與內部培養，建立了一支高度凝聚的隊伍。兩家公司的做法看似相反，但都清楚回答了同一個問題：我們需要什麼樣的人，以及如何讓這些人持續成長。這讓我理解到，人才管理沒有標準答案，關鍵在於制度與策略之間是否相互呼應。", "小組合作的過程也是很好的學習。我們組員來自金融、製造、醫療與科技等不同產業，一開始對案例的解讀差異很大，討論常常卡住。後來我們決定先各自整理自己產業的觀察，再一起比對，才發現彼此的經驗其實可以互補。這個過程讓我體會到，帶領團隊不是讓大家想法一致，而是讓不同的觀點被聽見，並找到共同的方向。", "另一個收穫來自老師對「讀人」的提醒。過去我評估同事，多半看他的工作成果和專業能力，很少去理解他的動機、擅長的工作方式，以及他希望在組織中扮演什麼角色。課程中的練習讓我發現，同樣的任務交給不同的人，結果可能完全不同；領導者如果不了解自己的團隊，就很難把人放在最能發揮的位置。", "回到自己的工作，我開始重新檢視部門的人才安排。過去我習慣把最重要的專案交給最資深的同事，認為這樣最穩妥，卻忽略了年輕同事的成長需求，也讓資深同事負荷過重。課後我嘗試調整分工，讓兩位年輕同事分別主導一個小型專案，由資深同事擔任顧問。雖然一開始進度慢了一些，但團隊的投入感明顯提升，我也看到他們在過程中展現出原本沒有機會發揮的能力。", "我也開始反省自己的溝通方式。以前開會時，我常常急著提出解決方案，希望盡快做出決定。現在我會刻意先請每位同事說說他們的看法，再一起歸納出方向。雖然會議時間變長了一點，但大家對決定的認同度提高，後續執行也順利許多。", "老師提到，領導者最重要的工作之一，是為組織培養下一代的領導者。這句話對我衝擊很大。我發現自己過去花了太多時間在處理眼前的問題，卻很少思考三年、五年後，團隊需要什麼樣的人才，以及我現在可以做些什麼來準備。接下來我希望為每位同事建立更清楚的發展方向，定期和他們討論職涯規劃，而不是只在年度考核時才談。", "這次領袖營讓我學到最重要的一件事，是用系統的眼光看待人才。策略、組織、制度與文化必須環環相扣，任何一個環節脫節，都會讓好的策略無法執行，讓好的人才流失。我期待在第二次領袖營中，進一步學習如何把這些觀念轉化為具體可行的管理工具，帶回組織中實踐。"];
+function demoScenario(kind){
+  loadSampleData();
+  ALLG.forEach(g=>{if(!DB.pdfs[g])DB.pdfs[g]={kind:"sample",name:`第${g}組_簡報.pdf`,orig:"簡報.pdf",at:Date.now()-g*5400e3}});
+  if(kind==="member"){
+    const m=DB.students.find(x=>x.group===1&&!x.leader&&!x.guest);
+    delete DB.versions[m.id]; delete DB.peer[m.id];
+    DB.drafts[m.id]={title:"策略與人才：第一次領袖營的學習反思",text:DEMO_ESSAY.join("\n"),at:Date.now()-1800e3}; syncEssay(m.id);
+    S.after="essay"; return m;
+  }
+  if(kind==="leader"){delete DB.finals[1]; S.after="members"; return DB.students.find(x=>x.group===1&&x.leader)}
+  S.after=null; return {teacher:true};
+}
+function demoLogin(kind){const u=demoScenario(kind);login(u);if(kind==="teacher")go("t-peer");toast(kind==="member"?"心得已寫好，可以直接試著繳交":kind==="leader"?"可以看組員繳交狀況，也可以送出小組評分":"可以看到所有組別的互評狀況")}
+const DEMO_PICK=`<div class="demo-pick">
+  <button data-dk="member"><b>👤 組員體驗</b><span>個人心得已經寫好約 1,400 字，可以直接試著繳交；各組簡報都已上傳，可以試著評分。</span></button>
+  <button data-dk="leader"><b>⭐ 組長體驗</b><span>看全組的作業繳交狀況（看不到別人的內容），並送出本組對七組的評分與排名。</span></button>
+  <button data-dk="teacher"><b>🎓 老師體驗</b><span>上帝視角：看每組互評送出的情況、批改作業、調整系統設定。</span></button>
+</div>`;
 function clearAllData(){Object.assign(DB,{essays:{},versions:{},drafts:{},pdfs:{},peer:{},finals:{},tEssay:{},tGroup:{}})}
 
 /* ================= 工具 ================= */
@@ -471,6 +508,7 @@ function applySnap(sn){
   for(const k of ["versions","drafts","pdfs","peer","finals","tEssay","tGroup"]) if(sn[k]) DB[k]=sn[k];
   if(sn.settings) Object.assign(DB.settings,sn.settings);
   if(sn.brief) BRIEF=sn.brief;
+  if(sn.history) Object.assign(DB.history,sn.history);
   DB.essays={}; DB.students.forEach(x=>syncEssay(x.id));
 }
 const blobToB64=blob=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(",")[1]);r.onerror=rej;r.readAsDataURL(blob)});
@@ -631,7 +669,6 @@ function downloadMenu(){
     <button class="btn" data-dlm="zip">個人作業：每人一份（ZIP 壓縮檔）</button>
     <button class="btn" data-dlm="ind">個人作業成績（Excel 可開）</button>
     <button class="btn" data-dlm="grp">小組成績（Excel 可開）</button>
-    <button class="btn" data-dlm="peer">個人互評明細（Excel 可開）</button>
     <button class="btn" data-dlm="fin">小組互評分數與評語（Excel 可開）</button>
     <label><input type="checkbox" data-onlysub checked style="width:18px;height:18px">PDF 只包含已繳交的（不含草稿）</label>
   </div></details></div>`;
@@ -657,6 +694,7 @@ function bindLogin(){
     if(!s){$("#lerr").textContent="找不到這個學號，請再確認一次（特邀學員請輸入 GUEST01 或 GUEST02）";return}
     sha("hw:"+s.id+":"+pw).then(h=>{if(h!==s.ph){$("#lerr").textContent="手機號碼不正確，請輸入 09 開頭的 10 碼";return}login(s)});
   };
+  $$("[data-dk]").forEach(b=>b.onclick=()=>{$("#modal").innerHTML="";demoLogin(b.dataset.dk)});
   $$("[data-demo]").forEach(b=>b.onclick=()=>b.dataset.demo==="teacher"?login({teacher:true}):login(byId(b.dataset.demo)));
 }
 function viewTeacherLogin(){
@@ -695,9 +733,10 @@ function openLogin(after){
       <button class="btn primary big" style="width:100%">登入</button>
     </form>
     <div class="muted" style="font-size:15px;margin-top:10px">特邀學員請用 GUEST01 或 GUEST02 登入。</div>
-    ${!CONFIG.demo?"":`<div class="demo-accts"><b>測試用快速登入</b>（展示模式才有這一區）
+    ${!CONFIG.demo?"":`<div class="demo-accts"><b>試用：選一種身分直接體驗</b>（展示模式才有這一區，資料都是假的）${DEMO_PICK}
+      <details><summary class="muted" style="cursor:pointer;font-size:15px">其他測試帳號</summary>
       ${quick.map(x=>`<button class="btn small" data-demo="${x.id}">第 ${x.group} 組${x.leader?"組長":x.guest?"特邀":"組員"}：${esc(x.name)}</button>`).join("")}
-      <button class="btn small" data-demo="teacher">老師後台</button>
+      <button class="btn small" data-demo="teacher">老師後台</button></details>
     </div>`}</div></div>`;
   bindLogin();
   $("#lclose").onclick=()=>{$("#modal").innerHTML="";S.after=null};
@@ -732,12 +771,14 @@ function viewPublicHome(){
   <div class="pub-actions">
     <div class="card"><div class="muted" style="font-size:15px">個人作業｜每個人都要交</div><div class="t">✍️ 個人反思心得</div><div class="d">總結第一次領袖營的學習反思，不超過 1500 字。直接在系統打字，會自動排版成兩頁 A4。</div><button class="btn primary big" data-go="essay">去寫心得</button></div>
     <div class="card"><div class="muted" style="font-size:15px">小組作業｜由組長上傳</div><div class="t">📊 小組報告</div><div class="d">${BRIEF.cases.map(c=>`${esc(c.short)}（${esc(c.part)}）`).join(" ＋ ")}，合成一份 PDF。</div><button class="btn big" data-go="upload">組長上傳報告</button></div>
-    ${PEER()?`<div class="card"><div class="muted" style="font-size:15px">小組上傳後開放</div><div class="t">⭐ 幫各組評分</div><div class="d">看完各組的簡報後給分。本組簡報上傳後才能開始。</div><button class="btn big" data-go="peer">去評分</button></div>`:""}
+    ${PEER()?`<div class="card"><div class="muted" style="font-size:15px">小組上傳後開放</div><div class="t">⭐ 幫各組評分</div><div class="muted" style="font-size:15px;margin-top:-4px">第 ${PR()} 次互評</div><div class="d">看完各組的簡報後給分。本組簡報上傳後才能開始。</div><button class="btn big" data-go="peer">去評分</button></div>`:""}
   </div>
-  <div class="hw-banner" style="margin-top:20px"><div style="font-size:30px">📋</div><div style="flex:1;min-width:220px"><b style="font-size:18px">還不清楚要交什麼？</b><div class="muted">題目、頁數、討論問題和補充資料，都整理在作業說明裡，不用登入就能看。</div></div><button class="btn" data-go="brief">看作業說明</button></div>`;
+  <div class="hw-banner" style="margin-top:20px"><div style="font-size:30px">📋</div><div style="flex:1;min-width:220px"><b style="font-size:18px">還不清楚要交什麼？</b><div class="muted">題目、頁數、討論問題和補充資料，都整理在作業說明裡，不用登入就能看。</div></div><button class="btn" data-go="brief">看作業說明</button></div>
+  ${CONFIG.demo?`<div class="card" style="margin-top:20px;border-style:dashed"><h3 style="margin:0 0 4px">🧪 試用：選一種身分直接體驗</h3><div class="muted" style="font-size:15px">展示模式才有這一區，資料都是假的，重新整理就會清空。</div>${DEMO_PICK}</div>`:""}`;
 }
 function bindPublic(){
   $$("[data-go]").forEach(b=>b.onclick=e=>{e.preventDefault();nav(b.dataset.go)});
+  $$("[data-dk]").forEach(b=>b.onclick=()=>demoLogin(b.dataset.dk));
 }
 
 /* ================= 學生：首頁 ================= */
@@ -750,7 +791,7 @@ function viewHome(){
     btn:st==="submitted"?"查看或修改":st==="draft"?"繼續寫":"開始寫",go:"essay"});
   const own=ownUploaded(u), nu=notUploaded();
   if(u.leader) T.push({cls:own?"done":"",t:"上傳本組簡報（組長）",d:own?`已上傳 ${esc(DB.pdfs[u.group].name)}（${fmtTime(DB.pdfs[u.group].at)}）`:PEER()?"還沒上傳。<b>上傳後，你和組員才能開始幫各組評分。</b>":"還沒上傳。請把三個部分合成一份 PDF 上傳。",btn:own?"重新上傳":"上傳簡報",go:"upload"});
-  if(PEER()) T.push({cls:!own?"wait":pd===7?"done":"",t:"幫各組評分",
+  if(PEER()) T.push({cls:!own?"wait":pd===7?"done":"",t:`幫各組評分（第 ${PR()} 次互評）`,
     d:!own?(u.leader?"先完成上一步：上傳本組簡報。":"要等組長上傳本組簡報後才能開始。"):pd===7?"七組都評完了，可以隨時回去修改。":`已評 ${pd} / 7 組。看各組簡報，給 0 到 100 分。${nu.length?`（第 ${nu.join("、")} 組還沒上傳簡報，上傳後才能評）`:""}`,
     btn:!own?"查看":pd===7?"查看我的評分":pd?"繼續評分":"開始評分",go:"peer"});
   if(u.leader){
@@ -915,7 +956,7 @@ function viewPeer(){
     <div class="card empty"><div style="font-size:44px">🔒</div><b>本組簡報還沒上傳</b>${u.leader?"你是組長，請先上傳本組簡報 PDF，上傳後全組就能開始評分。":"要等組長上傳第 "+u.group+" 組的簡報後，才能開始幫各組評分。"}
     ${u.leader?`<div style="margin-top:16px"><button class="btn primary big" data-go="upload">去上傳簡報</button></div>`:""}</div>`;
   const g=S.sel||ALLG.find(x=>!mine[x]&&DB.pdfs[x])||1, cur=mine[g], done=peerDone(u.id), idx=ALLG.indexOf(g);
-  return `<div class="page-head"><div><h2>幫各組評分</h2><div class="sub">看完簡報後打分數。評完按「下一組」，也可以點上面的組別跳過去。</div></div><span class="spacer"></span>
+  return `<div class="page-head"><div><h2>幫各組評分 <span class="pill draft" style="font-size:16px;vertical-align:middle">第 ${PR()} 次互評</span></h2><div class="sub">看完簡報後打分數。評完按「下一組」，也可以點上面的組別跳過去。</div></div><span class="spacer"></span>
     <div style="min-width:200px"><div class="row" style="justify-content:space-between;font-size:15px"><span>進度</span><b>${done} / 7 組</b></div><div class="bar"><i style="width:${done/7*100}%"></i></div></div></div>
   ${done===7&&!S.sel?`<div class="note ok">✓ 七組都評完了！組長會參考全組的分數送出小組評分。</div>`:""}
   <div class="chips">${ALLG.map(x=>`<button class="chip ${mine[x]?"done":""} ${x===g?"on":""}" data-pg="${x}">第 ${x} 組${x===u.group?"（本組）":""}<small>${mine[x]?`✓ ${mine[x].score} 分`:DB.pdfs[x]?"未評":"未上傳"}</small></button>`).join("")}</div>
@@ -999,7 +1040,7 @@ function viewGroupSubmit(){
     <div class="card empty"><div style="font-size:44px">🔒</div><b>請先上傳本組簡報</b>上傳後組員才能開始評分，之後再回來送出小組評分。<div style="margin-top:16px"><button class="btn primary big" data-go="upload">去上傳簡報</button></div></div>`;
   const notDone=mem.filter(s=>peerDone(s.id)<7);
   if(!S.rk||S.rk.g!==g){initRank();S.rk.g=g}
-  return `<div class="page-head"><div><h2>送出第 ${g} 組的小組評分</h2><div class="sub">參考組員的分數，替七組打分、寫評語，並拖曳排出第 1 到第 7 名。</div></div></div>
+  return `<div class="page-head"><div><h2>送出第 ${g} 組的小組評分 <span class="pill draft" style="font-size:16px;vertical-align:middle">第 ${PR()} 次互評</span></h2><div class="sub">參考組員的分數，替七組打分、寫評語，並拖曳排出第 1 到第 7 名。</div></div></div>
   ${notUploaded().length?`<div class="note" style="background:var(--warn-soft);color:var(--warn)">第 ${notUploaded().join("、")} 組還沒上傳簡報。可以先填分數和評語，但要等七組都上傳後才能送出。</div>`:""}
   ${fin?`<div class="note ok">✓ 已在 ${fmtTime(fin.at)} 送出，修改後可以重新送出。</div>`:notDone.length?`<div class="note">還有 ${notDone.length} 位組員沒評完：${notDone.map(s=>esc(s.name)).join("、")}。建議等全員評完再送出，但你也可以先送。</div>`:`<div class="note info">全組都評完了，可以送出。</div>`}
   <details ${fin?"":"open"} style="margin-bottom:22px"><summary style="cursor:pointer;font-weight:700;font-size:18px;min-height:40px">① 組員的個人評分</summary>${memberMatrix(g,{hiId:u.id})}</details>
@@ -1064,7 +1105,7 @@ function bindGroupSubmit(){
     if(!ok) return;
     if(BACKEND){ try{ await call("submitFinal",{scores,ranks,comments,overall},{busyMsg:"正在送出…"}) }catch(err){ return } }
     else DB.finals[S.user.group]={scores:{...scores},ranks,comments,overall,at:Date.now()};
-    toast("小組評分已送出"); go("home");
+    toast(ALLG.every(g=>DB.finals[g])?"小組評分已送出。七組都送出了，系統會自動寄互評結果給老師":"小組評分已送出"); go("home");
   };
 }
 
@@ -1242,7 +1283,7 @@ function bindUpload(){
     if(BACKEND){ try{ await call("uploadReport",{data:await blobToB64(f),orig:f.name,pages},{busyMsg:"正在上傳，請不要關閉頁面…"}) }catch(err){ return }
       const p=DB.pdfs[S.user.group]; if(p){p.blob=f;p.url=url} }
     else DB.pdfs[S.user.group]={kind:"pdf",name:`第${S.user.group}組_簡報.pdf`,orig:f.name,blob:f,url,pages,at:Date.now()};
-    toast(pages>maxPages()?`已上傳，但有 ${pages} 頁，超過 ${maxPages()} 頁上限`:first&&PEER()?"簡報已上傳，全組現在可以開始評分了":first?"小組報告已上傳":"小組報告已更新");render()};
+    toast(pages>maxPages()?`已上傳，但有 ${pages} 頁，超過 ${maxPages()} 頁上限`:first&&ALLG.every(g=>DB.pdfs[g])?"簡報已上傳。七組都上傳了，系統會自動寄簡報連結給老師":first&&PEER()?"簡報已上傳，全組現在可以開始評分了":first?"小組報告已上傳":"小組報告已更新");render()};
   $("#pdfIn").onchange=e=>take(e.target.files[0]);
   const d=$("#drop");d.ondragover=e=>{e.preventDefault();d.classList.add("drag")};d.ondragleave=()=>d.classList.remove("drag");d.ondrop=e=>{e.preventDefault();d.classList.remove("drag");take(e.dataTransfer.files[0])};
   mountPdfs();
@@ -1303,6 +1344,15 @@ function viewTSettings(){
       <input type="checkbox" id="remindOn" ${DB.settings.remindOn!==false?"checked":""} ${BACKEND?"":"disabled"} style="width:26px;height:26px;margin-top:2px;accent-color:var(--accent)">
       <div><b style="font-size:18px">自動提醒信</b><div class="muted" style="font-size:15px">截止前三天、前一天的早上 9 點，自動寄信給還沒交個人作業的人。${BACKEND?"第一次使用前，助教要在試算表選單「ASTM 系統 → 開啟自動提醒排程」。":"（展示模式不會寄信，正式版才有作用）"}</div></div>
     </label></div>
+  <div class="card" style="margin-bottom:18px"><h3>🔁 互評次數</h3>
+    <div style="font-size:18px">目前進行中：<b>第 ${PR()} 次互評</b>（全學期共 ${PEER_ROUNDS} 次）</div>
+    <div class="muted" style="font-size:15px;margin:6px 0 12px">學員和組長的互評頁面都會標示「第 ${PR()} 次互評」。結束這一次時，系統會把各組送出的小組評分封存成結果，個人評分不保留，接著清空資料開始下一次。${Object.keys(DB.history).map(n=>`第 ${n} 次`).join("、")}已經結束，可以在「互評結果」查看。</div>
+    <button class="btn" id="nextRound" ${PR()>=PEER_ROUNDS?"disabled":""}>結束第 ${PR()} 次互評，開始第 ${PR()+1} 次</button>
+  </div>
+  <div class="card" style="margin-bottom:18px"><h3>📬 自動通知老師</h3>
+    <div class="muted" style="font-size:15px;margin-bottom:10px">七組都上傳簡報時，寄出簡報的雲端資料夾連結；七組都送出小組互評時，寄出互評結果。每一次互評各寄一次。${BACKEND?"":"（展示模式不會真的寄信）"}</div>
+    <div class="row"><input id="notifyEmail" type="email" placeholder="老師的 Email，多個用逗號隔開" value="${esc(DB.settings.notifyEmail||"")}" style="flex:1;min-width:240px;font-size:17px;padding:10px 12px;border:1px solid var(--line);border-radius:10px"><button class="btn primary" id="saveNotify">儲存</button></div>
+  </div>
 
   <div class="card"><div class="row"><h3 style="margin:0">📋 作業說明</h3><span class="spacer"></span><button class="btn small" id="bPreview">看學員畫面</button></div>
     <div class="help" style="margin-top:12px">小技巧：一行就是一段。用 <b>**文字**</b> 會變成螢光筆重點；寫 <b>{截止}</b> 會自動換成截止時間；老師的話裡單獨一行寫 <b>[ABC]</b> 會顯示 ABC 三格。<br>補充資料一行一筆：「標題 | 來源 | 網址」（來源可省略），用「## 小標」分類。討論問題一行一題，開頭寫題號，例如「1.1 題目內容」。</div>
@@ -1327,6 +1377,18 @@ function viewTSettings(){
 function bindTSettings(){
   $("#dlSave").onclick=()=>{const v=new Date($("#dlIn").value).getTime();if(!v){toast("時間格式不正確");return}if(BACKEND){call("saveSettings",{deadline:v},{busyMsg:"儲存中…"}).then(()=>{toast(`截止時間已改為 ${fmtDue(v)}`);render()}).catch(()=>{});return}DB.settings.deadline=v;toast(`截止時間已改為 ${fmtDue(v)}`);render()};
   if($("#remindOn")) $("#remindOn").onchange=e=>{const on=e.target.checked;call("saveSettings",{remindOn:on},{busyMsg:"儲存中…"}).then(()=>{toast(on?"已開啟自動提醒信":"已關閉自動提醒信");render()}).catch(()=>{e.target.checked=!on})};
+  $("#saveNotify").onclick=async()=>{const v=$("#notifyEmail").value.trim();
+    if(v&&!v.split(/[,，\s]+/).filter(Boolean).every(x=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x))){toast("Email 格式不對");return}
+    if(BACKEND){try{await call("saveSettings",{notifyEmail:v},{busyMsg:"儲存中…"})}catch(e){return}} else DB.settings.notifyEmail=v;
+    toast(v?"已儲存，之後會自動通知："+v:"已清空，不會寄通知信")};
+  if($("#nextRound")) $("#nextRound").onclick=async()=>{
+    const cur=PR(), sent=ALLG.filter(g=>DB.finals[g]).length;
+    const ok=await dialog({title:`結束第 ${cur} 次互評？`,body:`目前 ${sent} / 7 組送出了小組評分。結束後會把這些小組評分封存成「第 ${cur} 次互評」的結果，個人評分不保留；小組報告與互評資料會清空，開始第 ${cur+1} 次。`,buttons:[{l:"取消",v:false},{l:`結束並開始第 ${cur+1} 次`,v:true,primary:true}]});
+    if(!ok) return;
+    if(BACKEND){try{await call("endRound",{},{busyMsg:"封存中…"})}catch(e){return} toast(`已開始第 ${cur+1} 次互評`);render();return}
+    const R=liveRound(); DB.history[cur]={title:`第 ${cur} 次小組作業互評`,ranks:R.ranks,scores:R.scores,comments:R.comments,overall:R.overall,at:R.at};
+    Object.assign(DB,{peer:{},finals:{},pdfs:{}}); DB.settings.peerRound=cur+1; toast(`已開始第 ${cur+1} 次互評`); render();
+  };
   $("#peerOn").onchange=e=>{ if(BACKEND){const on=e.target.checked;call("saveSettings",{peerOn:on},{busyMsg:"儲存中…"}).then(()=>{toast(on?"已開啟組間互評":"已關閉組間互評，學員端的互評頁面已隱藏");render()}).catch(()=>{e.target.checked=!on});return}
     DB.settings.peerOn=e.target.checked;toast(e.target.checked?"已開啟組間互評":"已關閉組間互評，學員端的互評頁面已隱藏");render()};
   const v=id=>$("#"+id).value;
@@ -1426,29 +1488,76 @@ function bindTGroups(){
 }
 
 /* ================= 老師：互評結果 ================= */
-function viewTPeer(){
-  const pg=S.sel?.g||1, pv=S.sel?.sid, pvStu=pv&&byId(pv), pvData=pv&&DB.peer[pv];
-  return `<div class="page-head"><div><h2>小組互評結果</h2><div class="sub">每一列是評分的組別，每一欄是被評的組別，格子裡是「分數／名次」。</div></div><span class="spacer"></span>${downloadMenu()}</div>
-  <div class="card" style="padding:0;overflow:auto"><table class="matrix">
-    <thead><tr><th>評分組 ＼ 被評組</th>${ALLG.map(t=>`<th class="num">第 ${t} 組</th>`).join("")}</tr></thead>
-    <tbody>${ALLG.map(g=>{const f=DB.finals[g];return `<tr><td>第 ${g} 組 ${f?`<span class="muted" style="font-size:14px">${fmtTime(f.at)}</span>`:'<span class="pill no">未送出</span>'}</td>${ALLG.map(t=>`<td class="num">${f?`${f.scores[t]}<span class="muted" style="font-size:14px">／第${f.ranks[t]}名</span>${f.comments?.[t]?' <span title="有評語" style="color:var(--gold)">●</span>':""}`:'<span class="cell-empty">—</span>'}</td>`).join("")}</tr>`}).join("")}
-      <tr class="avg"><td>平均分數</td>${ALLG.map(t=>`<td class="num">${peerReceived(t)??"—"}</td>`).join("")}</tr>
-      <tr class="avg"><td>平均名次</td>${ALLG.map(t=>`<td class="num">${rankReceived(t)??"—"}</td>`).join("")}</tr>
-      <tr class="final"><td>老師評分</td>${ALLG.map(t=>`<td class="num">${DB.tGroup[t]?.score??"—"}</td>`).join("")}</tr></tbody></table></div>
-  <h2 style="margin-top:32px">各組送出的評語</h2>
-  <div class="muted" style="margin-bottom:12px">點開可以看到該組給七組的評語，以及整體評語。</div>
-  ${ALLG.map(g=>{const f=DB.finals[g];return f?`<details class="card" style="margin-bottom:10px;padding:14px 18px"><summary style="cursor:pointer;font-weight:700;font-size:17px">第 ${g} 組的評分（${fmtTime(f.at)} 送出）${f.overall?'<span class="muted" style="font-weight:400">｜有整體評語</span>':""}</summary><div style="margin-top:10px">${finalTable(f)}</div></details>`:`<div class="card muted" style="margin-bottom:10px;padding:14px 18px">第 ${g} 組還沒送出</div>`}).join("")}
-  <h2 style="margin-top:32px">每位學生的個人評分</h2>
-  <div class="muted" style="margin-bottom:12px">選一組，再點學生姓名，可以看到他給每一組的分數和評語。<span style="color:var(--gold)">●</span> 表示有寫評語。</div>
-  <div class="row" style="margin-bottom:12px">${ALLG.map(g=>`<button class="btn small ${g===pg?"primary":""}" data-pgp="${g}">第 ${g} 組</button>`).join("")}</div>
-  ${memberMatrix(pg,{hiId:pv,clickable:true})}
-  ${pvStu?`<div class="card" style="margin-top:16px" id="pvCard"><div class="row"><h3 style="margin:0">${esc(pvStu.name)}（${pvStu.id}）的個人評分</h3><span class="spacer"></span><span class="muted">已評 ${peerDone(pv)} / 7 組</span></div>
-    ${pvData?`<table style="margin-top:10px"><thead><tr><th>被評組</th><th class="num">分數</th><th>評語</th></tr></thead><tbody>${ALLG.map(t=>{const v=pvData[t];return `<tr><td>第 ${t} 組${TOPICS[t-1]?"｜"+TOPICS[t-1]:""}${t===pvStu.group?' <span class="muted">（本組）</span>':""}</td><td class="num"><b>${v?.score??"—"}</b></td><td>${v?.comment?esc(v.comment):'<span class="muted">沒有評語</span>'}</td></tr>`}).join("")}</tbody></table>`:'<div class="muted" style="margin-top:10px">這位同學還沒有評分</div>'}</div>`:""}`;
+// 互評結果：只呈現小組層級（各組給的名次、分數、評語），不呈現個人評分
+// R = {ranks:{評分組:{被評組:名次}}, scores, comments?, overall?, best?, worst?, basis?, at?, note?}
+function liveRound(){
+  const R={ranks:{},scores:{},comments:{},overall:{},at:{}};
+  ALLG.forEach(g=>{const f=DB.finals[g];if(!f)return;R.ranks[g]=f.ranks;R.scores[g]=f.scores;R.comments[g]=f.comments||{};R.overall[g]=f.overall||"";R.at[g]=f.at});
+  return R;
 }
+function roundStats(R){
+  const raters=ALLG.filter(g=>R.ranks[g]);
+  const st=ALLG.map(t=>{
+    const rk=raters.map(g=>R.ranks[g][t]).filter(x=>x!=null), sc=raters.map(g=>R.scores[g]?.[t]).filter(x=>x!=null&&x!=="");
+    return {t,avgRank:rk.length?rk.reduce((a,b)=>a+b,0)/rk.length:null,avgScore:sc.length?sc.reduce((a,b)=>a+ +b,0)/sc.length:null};
+  });
+  const order=st.filter(x=>x.avgRank!=null).sort((a,b)=>a.avgRank-b.avgRank||(b.avgScore??0)-(a.avgScore??0));
+  order.forEach((x,i)=>x.final=i+1);
+  return {raters,st,order};
+}
+const gName=g=>`第${"一二三四五六七"[g-1]}組`;
+const f1=x=>x==null?"—":(Math.round(x*100)/100).toString();
+function roundView(R,live){
+  const {raters,st,order}=roundStats(R);
+  if(!raters.length) return `<div class="card empty"><div style="font-size:44px">⏳</div><b>還沒有組別送出小組評分</b>組長送出後，結果會出現在這裡。</div>`;
+  const byT=Object.fromEntries(st.map(x=>[x.t,x]));
+  return `
+  <h3 style="margin:4px 0 10px">七組綜合排名 <span class="muted" style="font-size:15px;font-weight:400">依各組給的名次取平均，數字越小越好（${raters.length} / 7 組已送出）</span></h3>
+  <div class="podium">${order.map(x=>`<div><div class="p">第 ${x.final} 名</div><div class="g">${gName(x.t)}</div><div class="s">平均名次 ${f1(x.avgRank)}${x.avgScore!=null?`<br>平均 ${f1(x.avgScore)} 分`:""}</div></div>`).join("")}</div>
+  <div class="card" style="padding:0;overflow:auto"><table class="matrix">
+    <thead><tr><th>被評組 ＼ 評分組</th>${ALLG.map(g=>`<th class="num">${gName(g)}評</th>`).join("")}<th class="num">平均名次</th><th class="num">綜合排名</th></tr></thead>
+    <tbody>${ALLG.map(t=>`<tr><td><b>${gName(t)}</b></td>${ALLG.map(g=>{const r=R.ranks[g]?.[t];if(r==null)return `<td class="num"><span class="cell-empty">${R.ranks[g]?"—":"未送出"}</span></td>`;const d=Math.min(5,Math.abs(r-(byT[t].final||r)));return `<td class="num rk-d${d}">${r}</td>`}).join("")}<td class="num"><b>${f1(byT[t].avgRank)}</b></td><td class="num"><b>${byT[t].final??"—"}</b></td></tr>`).join("")}
+    ${live?`<tr class="final"><td>老師評分</td>${ALLG.map(t=>`<td class="num">${DB.tGroup[t]?.score??"—"}</td>`).join("")}<td></td><td></td></tr>`:""}</tbody></table></div>
+  <div class="muted" style="font-size:14px;margin:8px 2px 0">格子是該組給的名次。顏色表示和綜合排名差幾名：
+    <span class="rk-d0" style="padding:1px 8px;border-radius:4px">相同</span> <span class="rk-d1" style="padding:1px 8px;border-radius:4px">差 1</span> <span class="rk-d2" style="padding:1px 8px;border-radius:4px">差 2</span> <span class="rk-d3" style="padding:1px 8px;border-radius:4px">差 3</span> <span class="rk-d4" style="padding:1px 8px;border-radius:4px">差 4</span> <span class="rk-d5" style="padding:1px 8px;border-radius:4px">差 5 以上</span></div>
+  <details class="card" style="margin-top:16px;padding:14px 18px"><summary style="cursor:pointer;font-weight:700;font-size:17px">各組給的分數</summary>
+    <div style="overflow:auto;margin-top:10px"><table class="matrix"><thead><tr><th>被評組 ＼ 評分組</th>${ALLG.map(g=>`<th class="num">${gName(g)}評</th>`).join("")}<th class="num">平均分數</th></tr></thead>
+    <tbody>${ALLG.map(t=>`<tr><td><b>${gName(t)}</b></td>${ALLG.map(g=>{const v=R.scores[g]?.[t];return `<td class="num">${v==null||v===""?'<span class="cell-empty">—</span>':f1(+v)}</td>`}).join("")}<td class="num"><b>${f1(byT[t].avgScore)}</b></td></tr>`).join("")}
+    ${R.basis?`<tr class="avg"><td>計分方式</td>${ALLG.map(g=>`<td style="font-size:13px;font-weight:400">${esc(R.basis[g]||"")}</td>`).join("")}<td></td></tr>`:""}</tbody></table></div>
+    ${R.note?`<div class="muted" style="font-size:14px;margin-top:8px">${esc(R.note)}</div>`:""}</details>
+  ${R.best?`<h3 style="margin:28px 0 10px">各組評語：第一名與最後一名的原因</h3>
+  ${raters.map(g=>{const rk=R.ranks[g],first=ALLG.find(t=>rk[t]===1),last=ALLG.find(t=>rk[t]===7);return `<div class="card" style="margin-bottom:10px;padding:14px 18px">
+    <div style="font-weight:700;font-size:18px;margin-bottom:6px">${gName(g)}的評語</div>
+    <div style="margin-bottom:6px"><span class="pill ok">第一名：${first?gName(first):"—"}</span> ${esc(R.best[g]||"")}</div>
+    <div><span class="pill no">最後一名：${last?gName(last):"—"}</span> ${esc(R.worst[g]||"")}</div></div>`}).join("")}`:""}
+  ${!live&&R.comments?`<h3 style="margin:28px 0 10px">各組送出的評語</h3>
+  ${raters.map(g=>`<details class="card" style="margin-bottom:10px;padding:14px 18px"><summary style="cursor:pointer;font-weight:700;font-size:17px">${gName(g)}的評分</summary><div style="margin-top:10px">${finalTable({scores:R.scores[g],ranks:R.ranks[g],comments:R.comments[g]||{},overall:R.overall?.[g]||""})}</div></details>`).join("")}`:""}
+  ${live?`<h3 style="margin:28px 0 10px">各組送出的評語</h3>
+  ${ALLG.map(g=>{const f=DB.finals[g];return f?`<details class="card" style="margin-bottom:10px;padding:14px 18px"><summary style="cursor:pointer;font-weight:700;font-size:17px">${gName(g)}的評分（${fmtTime(f.at)} 送出）${f.overall?'<span class="muted" style="font-weight:400">｜有整體評語</span>':""}</summary><div style="margin-top:10px">${finalTable(f)}</div></details>`:`<div class="card muted" style="margin-bottom:10px;padding:14px 18px">${gName(g)}還沒送出</div>`}).join("")}`:""}`;
+}
+function viewTPeer(){
+  const cur=PR(), r=S.sel?.r||cur;
+  const label=n=>n<cur?"已結束":n===cur?"進行中":"尚未開始";
+  const body=r<cur?(DB.history[r]?roundView(DB.history[r],false):`<div class="card empty"><b>第 ${r} 次互評沒有資料</b></div>`)
+    :r===cur?roundView(liveRound(),true)
+    :`<div class="card empty"><div style="font-size:44px">🗓</div><b>第 ${r} 次互評還沒開始</b>在「⚙ 系統設定」結束第 ${cur} 次互評後，就會開始第 ${cur+1} 次。</div>`;
+  return `<div class="page-head"><div><h2>小組互評結果</h2><div class="sub">只呈現各組送出的小組評分（名次、分數、評語），不列出個人評分。</div></div><span class="spacer"></span>${downloadMenu()}</div>
+  <div class="rounds">${Array.from({length:PEER_ROUNDS},(_,i)=>i+1).map(n=>`<button class="${n===r?"on":""}" data-rd="${n}"><b>第 ${n} 次互評</b><small>${label(n)}</small></button>`).join("")}</div>
+  ${DB.history[r]?.title&&r<cur?`<div class="note info">${esc(DB.history[r].title)}：系統上線前已完成，結果由各組繳交的互評檔整理匯入。</div>`:""}
+  ${body}`;
+}
+// 學員、組長看已結束的互評結果（進行中的那一次不公開）
+function viewSResults(){
+  const done=Object.keys(DB.history).map(Number).filter(n=>n<PR()).sort((a,b)=>a-b), r=S.sel?.r&&done.includes(S.sel.r)?S.sel.r:done[done.length-1];
+  if(!r) return `<div class="page-head"><div><h2>互評結果</h2></div></div><div class="card empty"><b>還沒有已結束的互評</b></div>`;
+  return `<div class="page-head"><div><h2>互評結果</h2><div class="sub">已結束的互評，每個人都能看。進行中的第 ${PR()} 次互評，要等老師結束後才會公開。</div></div></div>
+  <div class="rounds">${done.map(n=>`<button class="${n===r?"on":""}" data-rd="${n}"><b>第 ${n} 次互評</b><small>已結束</small></button>`).join("")}</div>
+  ${roundView(DB.history[r],false)}`;
+}
+function bindSResults(){$$("[data-rd]").forEach(b=>b.onclick=()=>go("results",{r:+b.dataset.rd}))}
 function bindTPeer(){
   bindDownloadMenu();
-  $$("[data-pgp]").forEach(b=>b.onclick=()=>go("t-peer",{g:+b.dataset.pgp}));
-  $$("[data-pv]").forEach(r=>r.onclick=()=>{go("t-peer",{g:byId(r.dataset.pv).group,sid:r.dataset.pv});setTimeout(()=>$("#pvCard")?.scrollIntoView({behavior:"smooth",block:"center"}),50)});
+  $$("[data-rd]").forEach(b=>b.onclick=()=>go("t-peer",{r:+b.dataset.rd}));
 }
 
 /* ================= 路由 ================= */
@@ -1477,8 +1586,9 @@ function render(){
     tabs=[{k:"home",l:"首頁"},{k:"brief",l:"作業說明"},{k:"essay",l:"我的作業",b:essayStatus(u.id)==="submitted"?"":"!"},...(PEER()?[{k:"peer",l:ownUploaded(u)?"幫各組評分":"幫各組評分 🔒",b:ownUploaded(u)&&peerDone(u.id)<7?7-peerDone(u.id):""}]:[])];
     if(u.leader){tabs.splice(3,0,{k:"upload",l:"上傳簡報",b:DB.pdfs[u.group]?"":"!"});if(PEER())tabs.push({k:"gsubmit",l:"送出小組評分",b:DB.finals[u.group]?"":"!"});tabs.push({k:"members",l:"組員狀況",b:miss||""})}
     else if(PEER()) tabs.push({k:"matrix",l:"全組評分彙整"});
+    if(PEER()&&Object.keys(DB.history).length) tabs.push({k:"results",l:"互評結果"});
     if(!PEER()&&["peer","gsubmit","matrix"].includes(S.tab)) S.tab="home";
-    V={brief:[viewBrief,bindBrief],home:[viewHome,bindHome],essay:[viewEssay,bindEssay],peer:[viewPeer,bindPeer],matrix:[viewMatrix],gsubmit:[viewGroupSubmit,bindGroupSubmit],members:[viewMembers,bindMembers],upload:[viewUpload,bindUpload]};
+    V={brief:[viewBrief,bindBrief],home:[viewHome,bindHome],essay:[viewEssay,bindEssay],peer:[viewPeer,bindPeer],matrix:[viewMatrix],gsubmit:[viewGroupSubmit,bindGroupSubmit],members:[viewMembers,bindMembers],upload:[viewUpload,bindUpload],results:[viewSResults,bindSResults]};
   }
   const [view,bind]=V[S.tab]||V.home;
   if(S.tab!=="essay") S.draft=null;

@@ -8,6 +8,18 @@ const file = pathToFileURL(path.resolve(process.argv[2] || "index.html")).href;
 const errors = [];
 const ok = (cond, msg) => { if (!cond) throw new Error("✗ " + msg); console.log("✓ " + msg); };
 
+// Apps Script 會把 JS 裡 // 後面的內容當註解刪掉（連字串裡的網址也會被砍），所以字串裡的 :// 一律寫成 :\/\/
+{
+  const src = (await import("node:fs")).readFileSync(path.resolve(process.argv[2] || "index.html"), "utf8");
+  const js = src.slice(src.lastIndexOf("\n<script>\n"));
+  const bad = js.split("\n").filter(l => l.includes("//") && !l.trim().startsWith("//") && !/; \/\/ /.test(l));
+  ok(bad.length === 0, "程式碼字串裡沒有 //（Apps Script 相容）" + (bad.length ? "：" + bad[0].trim().slice(0, 60) : ""));
+  const body = src.match(/<script>([\s\S]*)<\/script>\s*<\/body>/)[1];
+  const stripped = body.split("\n").map(l => { const i = l.indexOf("//"); return i < 0 ? l : l.slice(0, i); }).join("\n");
+  let parses = true; try { new Function(stripped); } catch (e) { parses = false; }
+  ok(parses, "模擬 Apps Script 刪掉 // 之後，程式仍能正常執行");
+}
+
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1366, height: 900 } });
 page.on("pageerror", e => errors.push(e.message));

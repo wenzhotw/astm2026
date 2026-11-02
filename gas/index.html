@@ -896,7 +896,7 @@ function sampleSlides(g){
 async function renderPdfInto(el,url){
   el.innerHTML='<div class="muted">簡報載入中…</div>';
   try{ if(!url){const b=await reportBlob(+el.dataset.pdf); if(!b) throw 0; url=URL.createObjectURL(b)}
-    const lib=window.pdfjsLib;if(!lib)throw 0;lib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    const lib=window.pdfjsLib;if(!lib)throw 0;lib.GlobalWorkerOptions.workerSrc="https:\/\/cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
     const pdf=await lib.getDocument(url).promise; el.innerHTML='<div class="slides"></div>'; const box=el.firstChild;
     for(let i=1;i<=pdf.numPages;i++){const p=await pdf.getPage(i),vp=p.getViewport({scale:1.6}),cv=document.createElement("canvas");cv.width=vp.width;cv.height=vp.height;box.appendChild(cv);await p.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise}
   }catch(e){el.innerHTML='<div class="fit-warn">簡報無法顯示，請確認檔案是 PDF</div>'}
@@ -1075,7 +1075,7 @@ function reminderText(){
   if(miss.length) t+=`\n還沒交個人作業：${miss.map(s=>"@"+s.name).join(" ")}`;
   if(np.length&&PEER()) t+=`\n還沒評完各組：${np.map(s=>"@"+s.name+`（${peerDone(s.id)}/7）`).join(" ")}`;
   if(!miss.length&&(!np.length||!PEER())) t+="\n大家都完成了，辛苦了！";
-  return t+`\n\n繳交網址：https://（正式版的網址）`;
+  return t+`\n\n繳交網址：https:\/\/（正式版的網址）`;
 }
 function viewMembers(){
   const g=S.user.group, mem=groupMembers(g), done=mem.filter(s=>essayStatus(s.id)==="submitted").length;
@@ -1103,7 +1103,7 @@ const BRIEF_DEFAULT={
   cases:[
     {tag:"(1) 主體",part:"主體",short:"Netflix 及華為",sub:"案例學習-1",pages:12,pageNote:"最多 12 頁",title:"案例學習-1：Netflix 及華為",
      desc:"請各自先行閱讀 Netflix 及華為案例後，進行小組討論並提交一份小組報告（ppt 簡報格式，最多不超過 12 頁）。除了所提供的案例資料及下列補充資料，歡迎上網搜索這三家案例公司的許多公開資料。",
-     refs:"## 想多瞭解 Netflix\n零規則－高人才密度 × 完全透明 × 最低管控 | 天下雜誌出版社 | https://www.books.com.tw/products/0010873975?loc=P_br_r0vq68ygz_D_2aabd0_B_2\nNetflix 文化：自由與責任 | Weblink | https://docs.huihoo.com/netflix/Netflix%E6%96%87%E5%8C%96-%E8%87%AA%E7%94%B1%E4%B8%8E%E8%B4%A3%E4%BB%BB%E4%B8%AD%E8%8B%B1%E6%96%87%E5%8F%8C%E8%AF%AD%E5%AF%B9%E7%85%A7%E7%89%88.pdf\n## 想多瞭解華為\n「華為模式」管理法：愈是核心幹部，愈是「折騰」得厲害 | 遠見雜誌 | https://www.gvm.com.tw/article/73540\n任正非：用幹部隊伍激活的確定性，應對環境與商業變化的不確定性（講話全文） | IT之家 | https://www.ithome.com/0/548/225.htm",
+     refs:"## 想多瞭解 Netflix\n零規則－高人才密度 × 完全透明 × 最低管控 | 天下雜誌出版社 | https:\/\/www.books.com.tw/products/0010873975?loc=P_br_r0vq68ygz_D_2aabd0_B_2\nNetflix 文化：自由與責任 | Weblink | https:\/\/docs.huihoo.com/netflix/Netflix%E6%96%87%E5%8C%96-%E8%87%AA%E7%94%B1%E4%B8%8E%E8%B4%A3%E4%BB%BB%E4%B8%AD%E8%8B%B1%E6%96%87%E5%8F%8C%E8%AF%AD%E5%AF%B9%E7%85%A7%E7%89%88.pdf\n## 想多瞭解華為\n「華為模式」管理法：愈是核心幹部，愈是「折騰」得厲害 | 遠見雜誌 | https:\/\/www.gvm.com.tw/article/73540\n任正非：用幹部隊伍激活的確定性，應對環境與商業變化的不確定性（講話全文） | IT之家 | https:\/\/www.ithome.com/0/548/225.htm",
      hint:"以下討論問題有助於討論方向，但不必以此為限。目的是以**「領導及人才管理」**為主題，整理出從這些案例得到的體會和感悟。網上有很多這些案例公司的資訊，可以自己搜尋補充。",
      qs:"1.1 這兩家公司的人才管理跟傳統的人才管理有何不同？三家公司又有何異同？有那些令你驚豔且特別值得學習的 Best Practices？為什麼他們不只能「看到」且能「做到」大家都沒想到，或只想而做不到的？\n1.2 Netflix 為什麼不給績效獎金？為什麼不怕影響員工的績效及投入度？\n1.3 90 年代的華為基本法對華為的成長產生什麼作用？華為大學跟一般企業大學有何不同？\n1.4 這兩個案例跟課堂上策略人才管理及四大心法的學習如何連接？\n1.6 其中大陸案例對台灣企業經營者有何特別意義和啟發？\n1.7 其中兩個案例，華為和 Netflix 的經營狀況和業績，都出過很大的問題，案例還值得學習嗎？為什麼？\n1.8 總結出五大學習亮點"},
     {tag:"(2) 附錄 1",part:"附錄 1",short:"Rob Parson",sub:"案例學習-2",pages:2,pageNote:"2 頁",title:"案例學習-2：Rob Parson 的績效挑戰",
@@ -1237,7 +1237,7 @@ function bindUpload(){
     const old=DB.pdfs[S.user.group];if(old?.url)URL.revokeObjectURL(old.url);
     const first=!old, url=URL.createObjectURL(f);
     busy("正在檢查 PDF…");
-    let pages=null; try{const lib=window.pdfjsLib;if(lib){lib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";pages=(await lib.getDocument(url).promise).numPages}}catch(e){}
+    let pages=null; try{const lib=window.pdfjsLib;if(lib){lib.GlobalWorkerOptions.workerSrc="https:\/\/cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";pages=(await lib.getDocument(url).promise).numPages}}catch(e){}
     busy();
     if(BACKEND){ try{ await call("uploadReport",{data:await blobToB64(f),orig:f.name,pages},{busyMsg:"正在上傳，請不要關閉頁面…"}) }catch(err){ return }
       const p=DB.pdfs[S.user.group]; if(p){p.blob=f;p.url=url} }

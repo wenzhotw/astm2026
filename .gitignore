@@ -1,0 +1,12 @@
+# 真實名單與個資：絕對不要上傳
+data/roster.csv
+data/*.real.csv
+*.xlsx
+*.xls
+dist/
+
+# 開發
+node_modules/
+.DS_Store
+test-results/
+playwright-report/

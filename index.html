@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ASTM 2026 課程作業繳交系統</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{
+  --bg:#f4f1ea; --card:#fffdf8; --ink:#1f2a2e; --muted:#5d6a6e; --line:#ddd6c8; --soft:#f7f3ea;
+  --accent:#1f5f5b; --accent-soft:#e3efec; --warn:#b5462f; --warn-soft:#f8e4dc;
+  --ok:#2f7a3d; --ok-soft:#e1f0e2; --gold:#b9862d; --gold-soft:#f6ecd6;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans TC",system-ui,sans-serif;font-size:17px;line-height:1.6}
+button,input,textarea,select{font:inherit;color:inherit}
+a{color:var(--accent)}
+.demo-bar{background:#2b2b2b;color:#f3e9d2;text-align:center;padding:6px 12px;font-size:14px}
+#zoomRoot{min-height:100vh}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 24px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20;flex-wrap:wrap}
+header.top h1{font-size:20px;margin:0;font-weight:700}
+header.top .who{color:var(--muted);font-size:15px}
+.fs{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.fs button{border:none;background:var(--card);padding:6px 12px;cursor:pointer;min-height:40px;font-weight:700}
+.fs button+button{border-left:1px solid var(--line)}
+.fs button.on{background:var(--accent);color:#fff}
+.btn{border:1px solid var(--line);background:var(--card);padding:10px 18px;border-radius:10px;cursor:pointer;font-weight:500;min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.big{padding:14px 26px;font-size:19px}
+.btn.small{padding:6px 12px;font-size:15px;min-height:36px}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+main{max-width:1280px;margin:0 auto;padding:20px 24px 120px}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:20px;border-bottom:2px solid var(--line)}
+.tab{padding:10px 16px;border:none;background:none;cursor:pointer;font-weight:500;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;min-height:44px}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.tab .badge{display:inline-block;background:var(--warn);color:#fff;border-radius:10px;font-size:12px;padding:0 7px;margin-left:6px;vertical-align:2px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}
+.muted{color:var(--muted)}
+.pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:14px;font-weight:500;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.no{background:var(--warn-soft);color:var(--warn)}
+.pill.draft{background:var(--gold-soft);color:#8a6420}
+.pill.lead{background:var(--accent-soft);color:var(--accent)}
+.pill.grey{background:#ece8df;color:var(--muted)}
+h2{font-size:23px;margin:0 0 4px}
+h3{font-size:18px;margin:0 0 8px}
+table{border-collapse:collapse;width:100%}
+th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left}
+th{font-weight:700;background:var(--soft);font-size:15px}
+td.num,th.num{text-align:center}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.spacer{flex:1}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 22px;border-radius:10px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:90;max-width:90vw;text-align:center}
+.toast.show{opacity:1}
+.overlay{position:fixed;inset:0;background:rgba(31,42,46,.5);display:grid;place-items:center;z-index:70;padding:16px;overflow:auto}
+.overlay .card{max-width:600px;width:100%;max-height:92vh;overflow:auto}
+.overlay .card.wide{max-width:760px}
+.bar{height:10px;background:var(--line);border-radius:5px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);transition:width .2s}
+.deadline{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;background:var(--gold-soft);color:#7a5517;font-weight:500;font-size:15px}
+.deadline.over{background:var(--warn-soft);color:var(--warn)}
+.page-head{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.page-head .sub{color:var(--muted)}
+.empty{text-align:center;padding:48px 20px;color:var(--muted)}
+.empty b{display:block;color:var(--ink);font-size:19px;margin-bottom:6px}
+
+/* login */
+.login-wrap{min-height:calc(100vh - 34px);display:grid;place-items:center;padding:24px}
+.login{width:min(440px,100%)}
+.login h1{font-size:28px;margin:0 0 4px}
+.field{display:block;margin:16px 0}
+.field>span{display:block;font-weight:500;margin-bottom:6px}
+.field input,.field textarea,.input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:18px}
+.field input:focus,.field textarea:focus,.input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+.err{color:var(--warn);min-height:1.6em;font-weight:500}
+.demo-accts{margin-top:22px;border-top:1px dashed var(--line);padding-top:14px;font-size:15px}
+.demo-accts button{width:100%;justify-content:flex-start;margin:6px 0}
+
+/* home */
+.tasks{display:grid;gap:14px}
+.task{display:grid;grid-template-columns:56px 1fr auto;gap:16px;align-items:center;padding:18px 20px}
+.task .no{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:20px;background:var(--accent-soft);color:var(--accent)}
+.task.done .no{background:var(--ok-soft);color:var(--ok)}
+.task.wait .no{background:#ece8df;color:var(--muted)}
+.task .t{font-size:20px;font-weight:700}
+.task .d{color:var(--muted)}
+@media (max-width:640px){.task{grid-template-columns:44px 1fr}.task .no{width:40px;height:40px;font-size:17px}.task .act{grid-column:1/-1}.task .act .btn{width:100%}}
+
+/* essay */
+.editor{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start}
+.editor textarea{min-height:480px;resize:vertical;line-height:1.8}
+.counter{margin-top:8px}
+.counter .info{display:flex;justify-content:space-between;font-size:15px;margin-bottom:4px}
+.counter.over .info{color:var(--warn);font-weight:700}
+.counter.over .bar i{background:var(--warn)}
+.counter.near .bar i{background:var(--gold)}
+.saved{font-size:14px;color:var(--muted)}
+.preview-col{position:sticky;top:84px}
+.preview-info{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:15px}
+.seg{display:none;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:14px}
+.seg button{flex:1;border:none;background:var(--card);padding:10px;font-weight:700;min-height:44px;cursor:pointer}
+.seg button.on{background:var(--accent);color:#fff}
+@media (max-width:960px){
+  .editor{grid-template-columns:1fr}.preview-col{position:static}.seg{display:flex}
+  .editor[data-mv="edit"] .preview-col{display:none}.editor[data-mv="preview"] .edit-col{display:none}
+}
+.help{background:var(--soft);border-radius:10px;padding:10px 14px;font-size:15px;margin-top:10px}
+.help ul{margin:4px 0 0;padding-left:1.2em}
+.pages{display:flex;flex-direction:column;gap:14px;align-items:center}
+.page-shell{background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.12);overflow:hidden;position:relative;flex:none}
+.page{width:794px;height:1123px;padding:76px;position:absolute;left:0;top:0;transform-origin:0 0;font-family:"Noto Serif TC","Noto Sans TC",serif;color:#000}
+.page .clip{position:relative;overflow:hidden}
+.page .flow{position:absolute;left:0;right:0}
+.page .pno{position:absolute;bottom:34px;left:0;right:0;text-align:center;font-size:14px;color:#666;font-family:"Noto Sans TC",sans-serif}
+.flow .hd{}
+.flow .hd .meta{display:flex;justify-content:center;gap:2.2em;font-family:"Noto Sans TC",sans-serif;font-weight:500;padding-top:8px}
+.flow .hd .ttl{text-align:center;font-weight:700;border-bottom:2px solid #000;padding-bottom:8px}
+.flow p{margin:0;text-indent:2em;text-align:justify;word-break:break-all}
+.fit-warn{background:var(--warn-soft);color:var(--warn);padding:8px 12px;border-radius:8px;font-weight:500;margin-bottom:10px}
+details.hist summary{cursor:pointer;font-weight:700;padding:6px 0;min-height:36px}
+
+/* peer */
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.chip{border:2px solid var(--line);background:var(--card);border-radius:12px;padding:6px 14px;cursor:pointer;min-height:44px;text-align:center;line-height:1.3}
+.chip small{display:block;font-size:13px;color:var(--muted)}
+.chip.done{border-color:var(--ok-soft);background:var(--ok-soft)}
+.chip.done small{color:var(--ok);font-weight:700}
+.chip.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.viewer{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:20px;align-items:start}
+@media (max-width:960px){.viewer{grid-template-columns:1fr}.viewer .panel{position:static!important}}
+.slides{display:flex;flex-direction:column;gap:14px}
+.slide{aspect-ratio:16/9;border-radius:6px;padding:7%;display:flex;flex-direction:column;justify-content:center;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.slide .k{font-size:clamp(12px,1.6vw,16px);opacity:.8}
+.slide .h{font-size:clamp(20px,3.4vw,40px);font-weight:700;line-height:1.25;margin:6px 0}
+.slide ul{font-size:clamp(14px,1.9vw,22px);margin:10px 0 0;padding-left:1.2em}
+.slides canvas{width:100%;height:auto;box-shadow:0 2px 8px rgba(0,0,0,.12);border-radius:4px;background:#fff}
+.scorebox{display:flex;align-items:center;gap:8px;margin:8px 0}
+.scorebox input{width:120px;font-size:34px;font-weight:700;text-align:center;padding:6px;border:2px solid var(--line);border-radius:12px}
+.scorebox input:focus{outline:none;border-color:var(--accent)}
+.scorebox .btn{min-width:60px;font-weight:700}
+textarea.cmt{width:100%;min-height:80px;padding:10px;border:1px solid var(--line);border-radius:10px;resize:vertical;background:#fff}
+
+/* matrix & ranking */
+.matrix td.num input{width:80px;text-align:center;padding:6px;font-size:18px;font-weight:700;border:1px solid var(--line);border-radius:6px}
+.matrix tr.avg td{background:var(--soft);font-weight:700}
+.matrix tr.final td{background:var(--accent-soft);font-weight:700}
+.mine td{background:#fffbe9}
+.cell-empty{color:#bbb}
+.rank-list{display:flex;flex-direction:column;gap:8px}
+.rank-item .rc{grid-column:1/-1;display:grid;grid-template-columns:120px 1fr;gap:12px;align-items:start}
+.rank-item .rc textarea{width:100%;min-height:44px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;resize:vertical;font-size:16px}
+.rank-item .mc{grid-column:1/-1;font-size:14px;color:var(--muted)}
+.rank-item .mc summary{cursor:pointer}
+@media (max-width:640px){.rank-item .rc{grid-template-columns:1fr}.rank-item .rc .lbl{display:none}}
+.rank-item{display:grid;grid-template-columns:36px 84px 1fr auto auto;gap:12px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+.rank-item.dragging{opacity:.4}
+.rank-item.over{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.rank-item.conflict{border-color:var(--gold);background:#fffaf0}
+.handle{cursor:grab;color:var(--muted);font-size:22px;text-align:center;user-select:none}
+.rk{font-weight:700;font-size:20px;color:var(--accent)}
+.rank-item input{width:90px;font-size:22px;font-weight:700;text-align:center;padding:6px;border:1px solid var(--line);border-radius:8px}
+.arrows{display:flex;gap:4px}
+.arrows .btn{min-width:44px;padding:6px}
+@media (max-width:640px){.rank-item{grid-template-columns:28px 64px 1fr;}.rank-item .sc,.rank-item .arrows{grid-column:span 1}.rank-item .sc{grid-column:2/4}.rank-item .arrows{grid-column:1/-1;justify-content:flex-end}}
+
+/* teacher */
+.dash{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.dash .card .n{font-size:34px;font-weight:700;line-height:1.2}
+.dash .card .n small{font-size:18px;color:var(--muted);font-weight:500}
+.namechips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.namechips span{background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:2px 8px;font-size:15px}
+.split{display:grid;grid-template-columns:300px minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:960px){.split{grid-template-columns:1fr}}
+.list-item{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);cursor:pointer;min-height:48px}
+.list-item:hover{background:var(--soft)}
+.list-item.on{background:var(--accent-soft)}
+.scroll{max-height:72vh;overflow:auto}
+.gradebar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:2px solid var(--accent);z-index:30;box-shadow:0 -4px 16px rgba(0,0,0,.08)}
+.gradebar .in{max-width:1280px;margin:0 auto;padding:12px 24px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.gradebar input.sc{width:100px;font-size:26px;font-weight:700;text-align:center;padding:6px;border:2px solid var(--line);border-radius:10px}
+.gradebar input.cm{flex:1;min-width:200px;padding:12px;border:1px solid var(--line);border-radius:10px;font-size:17px}
+details.menu{position:relative;display:inline-block}
+details.menu summary{list-style:none}
+details.menu summary::-webkit-details-marker{display:none}
+details.menu .items{position:absolute;right:0;top:calc(100% + 6px);background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:8px;min-width:280px;z-index:25}
+details.menu .items button{width:100%;justify-content:flex-start;border:none;background:none}
+details.menu .items button:hover{background:var(--soft)}
+details.menu .items label{display:flex;gap:8px;align-items:center;padding:8px 12px;font-size:15px;color:var(--muted);border-top:1px solid var(--line);margin-top:4px}
+.upload{border:2px dashed var(--line);border-radius:14px;padding:32px;text-align:center;background:#fff;cursor:pointer;display:block}
+.upload.drag{border-color:var(--accent);background:var(--accent-soft)}
+.note{background:var(--gold-soft);border-radius:10px;padding:10px 14px;font-size:15px;color:#6b4e16;margin-bottom:16px}
+.note.ok{background:var(--ok-soft);color:var(--ok)}
+.note.info{background:var(--accent-soft);color:var(--accent)}
+.msgbox{white-space:pre-wrap;background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:16px}
+.grid7{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+@media (max-width:640px){main{padding:14px 12px 120px}header.top{padding:10px 12px}header.top h1{font-size:17px}.card{padding:16px}}
+
+/* 作業說明 */
+.bw{display:grid;grid-template-columns:210px minmax(0,1fr);gap:36px;align-items:start;max-width:1080px;margin:0 auto}
+.toc{position:sticky;top:96px;display:flex;flex-direction:column;gap:2px;font-size:16px}
+.toc .tt{font-size:13px;color:var(--muted);font-weight:700;letter-spacing:.08em;margin:0 0 6px 12px}
+.toc a{display:block;padding:8px 12px;border-radius:8px;color:var(--muted);text-decoration:none;border-left:3px solid transparent;line-height:1.4}
+.toc a:hover{background:var(--soft);color:var(--ink)}
+.toc a.on{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:700}
+.toc a.sub{padding-left:26px;font-size:15px}
+.brief{font-size:19px;line-height:1.9;max-width:760px}
+.brief section{scroll-margin-top:96px}
+.brief .eyebrow{font-size:14px;font-weight:700;letter-spacing:.08em;color:var(--accent);margin-bottom:2px}
+.brief h1{font-size:30px;line-height:1.35;margin:0 0 6px}
+.brief h2{font-size:25px;line-height:1.4;margin:0 0 14px;display:flex;align-items:center;gap:12px}
+.brief h2 .tag{font-size:14px;font-weight:700;padding:3px 12px;border-radius:999px;background:var(--accent);color:#fff;line-height:1.6}
+.brief h2 .tag.g{background:#7a3b2e}
+.brief h3{font-size:21px;line-height:1.45;margin:0 0 6px}
+.brief p{margin:0 0 14px}
+.brief .lead{font-size:17px;color:var(--muted);margin:0}
+.brief section+section{margin-top:52px}
+.brief mark{background:linear-gradient(transparent 58%,#f3dfa9 58%);color:inherit;padding:0 2px;font-weight:700}
+/* 時間軸 */
+.tl{display:flex;align-items:flex-start;margin:22px 0 6px;position:relative}
+.tl:before{content:"";position:absolute;left:8%;right:8%;top:13px;height:3px;background:var(--line)}
+.tl .st{flex:1;text-align:center;position:relative;font-size:15px;line-height:1.5;color:var(--muted)}
+.tl .st i{display:block;width:18px;height:18px;border-radius:50%;background:var(--line);margin:4px auto 8px;border:3px solid var(--bg)}
+.tl .st b{display:block;color:var(--ink);font-size:16px}
+.tl .st.now i{background:var(--accent)}
+.tl .st.due i{background:var(--warn);width:24px;height:24px;margin-top:1px}
+.tl .st.due b{color:var(--warn)}
+/* 繳交清單 */
+.check{display:grid;gap:12px;margin-top:18px}
+.check .it{display:grid;grid-template-columns:52px 1fr auto;gap:14px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.check .ic{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;font-size:24px;background:var(--accent-soft)}
+.check .it.g .ic{background:#f5e6e2}
+.check .nm{font-size:20px;font-weight:700;line-height:1.4}
+.check .ds{font-size:16px;color:var(--muted);line-height:1.6}
+@media (max-width:640px){.check .it{grid-template-columns:44px 1fr}.check .it .btn{grid-column:1/-1}}
+/* 老師的話 */
+.letter{background:#fff;border-radius:16px;padding:26px 30px;position:relative;border:1px solid var(--line)}
+.letter:before{content:"“";position:absolute;left:18px;top:-6px;font-size:72px;color:var(--accent);opacity:.25;font-family:Georgia,serif;line-height:1}
+.letter p:last-child{margin-bottom:0}
+.abc{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0 18px}
+.abc div{background:var(--accent-soft);border-radius:12px;padding:10px;text-align:center;line-height:1.35}
+.abc b{display:block;font-size:26px;color:var(--accent)}
+.abc span{font-size:14px;color:var(--muted)}
+/* 規格列 */
+.specs{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:6px 0 18px}
+.specs div{background:#fff;padding:10px 14px;line-height:1.4}
+.specs span{display:block;font-size:13px;color:var(--muted)}
+.specs b{font-size:17px}
+/* 報告結構 */
+.struct{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;margin:16px 0 8px}
+.struct a{display:block;text-decoration:none;color:var(--ink);background:#fff;border:2px solid var(--line);border-radius:14px;padding:14px;line-height:1.45;transition:border-color .15s}
+.struct a:hover{border-color:var(--accent)}
+.struct a.main{border-color:var(--accent)}
+.struct .k{font-size:13px;font-weight:700;color:var(--accent)}
+.struct .t{font-size:18px;font-weight:700;margin:2px 0}
+.struct .p{font-size:15px;color:var(--muted)}
+.struct .bar{height:8px;background:var(--accent-soft);border-radius:4px;margin-top:10px;overflow:hidden}
+.struct .bar i{display:block;height:100%;background:var(--accent)}
+@media (max-width:640px){.struct{grid-template-columns:1fr}}
+/* 案例卡 */
+.case{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px 26px;margin-top:22px}
+.case .no{display:inline-block;font-size:14px;font-weight:700;color:#fff;background:#7a3b2e;border-radius:8px;padding:1px 10px;margin-bottom:8px}
+.qs{list-style:none;padding:0;margin:16px 0 0;counter-reset:none}
+.qs li{display:grid;grid-template-columns:54px 1fr;gap:10px;padding:14px 0;border-top:1px solid var(--line)}
+.qs li .n{font-weight:700;color:var(--accent);font-size:17px;padding-top:2px}
+.qs li .tx div+div{margin-top:4px}
+.qs li .note2{margin-top:10px;background:var(--gold-soft);color:#6b4e16;border-radius:10px;padding:10px 14px;font-size:16px;line-height:1.7}
+.scale{display:inline-flex;gap:4px;margin-left:8px;vertical-align:2px}
+.scale i{font-style:normal;width:26px;height:26px;border-radius:6px;border:1px solid var(--line);display:grid;place-items:center;font-size:13px;color:var(--muted);background:#fff}
+.scale i:last-child{border-color:var(--accent);color:var(--accent);font-weight:700}
+.hint{background:var(--soft);border-radius:12px;padding:14px 18px;font-size:17px;line-height:1.8;margin:18px 0 4px}
+.refs{margin:14px 0 0}
+.refs .rt{font-size:15px;font-weight:700;color:var(--muted);margin:12px 0 6px}
+.refs a{display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:8px;text-decoration:none;color:var(--ink);font-size:16px;line-height:1.55}
+.refs a:hover{border-color:var(--accent)}
+.refs a .ar{margin-left:auto;color:var(--accent);flex:none}
+.refs a small{display:block;color:var(--muted);font-size:13px}
+.closing{text-align:center;font-size:21px;font-weight:700;color:var(--accent);padding:30px 10px 10px;line-height:1.6}
+.totop{position:fixed;right:20px;bottom:24px;z-index:25;width:52px;height:52px;border-radius:50%;padding:0;font-size:20px;box-shadow:0 4px 14px rgba(0,0,0,.15)}
+@media (max-width:960px){
+  .bw{grid-template-columns:1fr;gap:0}
+  .toc{position:sticky;top:0;z-index:15;flex-direction:row;overflow-x:auto;background:var(--bg);padding:8px 0;margin:0 -12px 8px;padding-left:12px;gap:6px;scrollbar-width:none}
+  .toc .tt,.toc a.sub{display:none}
+  .toc a{white-space:nowrap;border:1px solid var(--line);border-radius:999px;background:var(--card);padding:6px 14px}
+  .toc a.on{border-color:var(--accent)}
+  .brief{font-size:18px;max-width:none}
+  .brief h1{font-size:26px}
+  .case{padding:18px}
+  .letter{padding:22px 20px}
+  .qs li{grid-template-columns:44px 1fr}
+}
+.hw-banner{display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-left:5px solid var(--accent);border-radius:12px;padding:14px 18px;margin-bottom:16px}
+
+@media (max-width:640px){
+  header.top{position:static;gap:8px}
+  header.top .who{font-size:14px}
+  .fs button{padding:4px 10px;min-height:38px}
+  .tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-left:-12px;margin-right:-12px;padding:0 12px}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{white-space:nowrap;padding:8px 12px}
+  .brief h1{font-size:23px}
+  .brief section,.case{scroll-margin-top:70px!important}
+  .totop{width:46px;height:46px;right:14px;bottom:16px}
+}
+
+/* 大倒數 */
+.cdh{border-radius:22px;padding:26px 24px 22px;text-align:center;color:#fff;background:linear-gradient(135deg,#1f5f5b,#163f3c);box-shadow:0 10px 30px rgba(31,95,91,.25);margin-bottom:22px}
+.cdh.warn{background:linear-gradient(135deg,#b9862d,#8a5f17);box-shadow:0 10px 30px rgba(185,134,45,.3)}
+.cdh.hot{background:linear-gradient(135deg,#c2452c,#8e2a1a);box-shadow:0 10px 30px rgba(181,70,47,.35)}
+.cdh.over{background:linear-gradient(135deg,#5d6a6e,#3a4447)}
+.cdh .lb{font-size:18px;font-weight:700;letter-spacing:.06em;opacity:.92}
+.cd{display:flex;justify-content:center;align-items:flex-start;gap:10px;margin:12px 0 10px}
+.cd>div{min-width:104px;background:rgba(255,255,255,.13);border-radius:16px;padding:10px 8px 8px}
+.cd b{display:block;font-size:68px;line-height:1;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.cd span{display:block;font-size:16px;opacity:.85;margin-top:6px}
+.cd i{font-style:normal;font-size:52px;line-height:1.3;opacity:.5}
+.cdh.hot .cd>div:last-child b{animation:tick 1s ease-in-out infinite}
+@keyframes tick{0%,100%{opacity:1}50%{opacity:.55}}
+.cdh .due{font-size:15px;opacity:.85}
+.cdh .msg{display:inline-block;margin-top:10px;background:rgba(255,255,255,.18);border-radius:999px;padding:4px 14px;font-size:15px;font-weight:700}
+@media (max-width:640px){.cd{gap:6px}.cd>div{min-width:0;flex:1;padding:8px 4px 6px}.cd b{font-size:42px}.cd i{display:none}.cd span{font-size:14px}.cdh{padding:20px 14px 18px}.cdh .lb{font-size:16px}}
+/* 公開首頁 */
+.pub-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.pub-actions .card{display:flex;flex-direction:column;gap:6px}
+.pub-actions .card .t{font-size:21px;font-weight:700}
+.pub-actions .card .d{color:var(--muted);flex:1}
+.loginbox{max-width:440px}
+</style>
+</head>
+<body>
+<div class="demo-bar" id="demoBar" hidden></div>
+<div id="zoomRoot"><div id="app"></div></div>
+<div id="modal"></div>
+<div id="busy"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================= 設定、名單與示範資料 ================= */
+const TOPICS=["","","","","","",""];
+const SLIDE_COLORS=["#1f5f5b","#7a3b2e","#2e4a7a","#5b4a1f","#3d6b2e","#6b2e5e","#2e6b6b"];
+/*CONFIG:BEGIN*/
+const CONFIG={"demo": true, "teacherId": "teacher", "teacherPwHash": "a548de78111c83ba36eeab2efd48efcd9a0059ba09f8bce7744d5e62b9fedd7f"};
+const ROSTER=[{"id": "114900001", "name": "王小明", "group": 1, "email": "student01@example.com", "leader": true, "guest": false, "ph": "1ef40619eed342e70dd20c086b383ffabbef81259ef0736ccaf4aa5f25b23f29"}, {"id": "114900002", "name": "李佳穎", "group": 1, "email": "student02@example.com", "leader": false, "guest": false, "ph": "8d2cdbb340402e6e72a1e000c4557b92c9f22d5df902fcd463a4f9dd48e2b2f7"}, {"id": "114900003", "name": "陳冠宇", "group": 1, "email": "student03@example.com", "leader": false, "guest": false, "ph": "50f5155d410ed303064e1f294bb832aec7a8cb425d3c3e69bd395a569e664261"}, {"id": "114900004", "name": "林雅婷", "group": 1, "email": "student04@example.com", "leader": false, "guest": false, "ph": "036a7e8b9308227cb1a651b0430ebd557f3966c1429bfb63f5ec6f1419fc9273"}, {"id": "114900005", "name": "張志豪", "group": 1, "email": "student05@example.com", "leader": false, "guest": false, "ph": "317aeeba4c071b4a54ac28075087b4a4a1f70d4baf25097b8c04f35dd7ff83e9"}, {"id": "114900006", "name": "黃怡君", "group": 1, "email": "student06@example.com", "leader": false, "guest": false, "ph": "e8fb1a00750df674d6d5352bd9ff69fc519a1955390a3b170b6a60cac4505995"}, {"id": "114900007", "name": "吳承翰", "group": 2, "email": "student07@example.com", "leader": true, "guest": false, "ph": "7788f329913b80cc52220731203458113b974df2ed3434aeaa69ab91dea242c6"}, {"id": "114900008", "name": "劉欣怡", "group": 2, "email": "student08@example.com", "leader": false, "guest": false, "ph": "03ef186b2475fb79e125733cef7253b026f003428a347404f07640c280440ec7"}, {"id": "114900009", "name": "蔡宗翰", "group": 2, "email": "student09@example.com", "leader": false, "guest": false, "ph": "2a51a087b4dcf714a3bd006590ae715532c070aa0418a8f48e8c87862baa1710"}, {"id": "114900010", "name": "楊詩涵", "group": 2, "email": "student10@example.com", "leader": false, "guest": false, "ph": "da3edb366881a1e9b049b38af2eef7149a5287cd46931c08e0eca2dd2eabaa5c"}, {"id": "114900011", "name": "許家豪", "group": 2, "email": "student11@example.com", "leader": false, "guest": false, "ph": "2086b78f700bc7f805798352c1cc9bab805967564d957774fcde4438f038ffdc"}, {"id": "GUEST01", "name": "鄭佩珊", "group": 2, "email": "student12@example.com", "leader": false, "guest": true, "ph": "73950ab7ca1a35edc8670b70f09a43784a07a2fe1bfd07d082370819a5316585"}, {"id": "114900013", "name": "謝俊傑", "group": 3, "email": "student13@example.com", "leader": true, "guest": false, "ph": "e25b0714e353cf8a4c15430d10a0941fec2bf5b8ee87f8fb9279b1685495ce1d"}, {"id": "114900014", "name": "郭雨萱", "group": 3, "email": "student14@example.com", "leader": false, "guest": false, "ph": "30a12bff0bfcf8478476f2b475bc32bccb678586b4d5a5d312dbb6304ee883a4"}, {"id": "114900015", "name": "洪柏翰", "group": 3, "email": "student15@example.com", "leader": false, "guest": false, "ph": "19fdae71b9c20f426d7188ea1b05a1295394ac5fdf936e68ca6183ff221cd27b"}, {"id": "114900016", "name": "曾靜宜", "group": 3, "email": "student16@example.com", "leader": false, "guest": false, "ph": "2a7731c4203b1806a661f54e086214958c7e4deb7bae8a30b2adb0a4c23af876"}, {"id": "114900017", "name": "邱子軒", "group": 3, "email": "student17@example.com", "leader": false, "guest": false, "ph": "9d52677b40e2c3b9523aa85bb4b204fc9db4e45f8c6df59e530e4040abfc6bee"}, {"id": "114900018", "name": "廖思妤", "group": 3, "email": "student18@example.com", "leader": false, "guest": false, "ph": "3c7dbacb23b5b8677baed532d73b7716e2ec4193d150323f7c2c737d1e7a396a"}, {"id": "114900019", "name": "賴品睿", "group": 4, "email": "student19@example.com", "leader": true, "guest": false, "ph": "eb0069458d4c243bb7d6227c7ab632f9935a4384435d75a79e56e8b0abed4f59"}, {"id": "114900020", "name": "周郁婷", "group": 4, "email": "student20@example.com", "leader": false, "guest": false, "ph": "98b1e171019cc3e1234dd05b804f1e29fc5d40499767efc759c1f180ae80e813"}, {"id": "114900021", "name": "徐建宏", "group": 4, "email": "student21@example.com", "leader": false, "guest": false, "ph": "603b1b1ba510ed151bce81d014d5c891f26098dbe0b2ff743003931f030aad57"}, {"id": "114900022", "name": "蘇芷琳", "group": 4, "email": "student22@example.com", "leader": false, "guest": false, "ph": "a6f27b38bd65b28d37fd61d1a111ac6d78978397665330e4419106d28fbd6fd1"}, {"id": "114900023", "name": "葉育誠", "group": 4, "email": "student23@example.com", "leader": false, "guest": false, "ph": "a5ffac49abaa5ae961ba1c668205f82cc7406a085a32fba13c8a1a375230e346"}, {"id": "114900024", "name": "莊宛庭", "group": 4, "email": "student24@example.com", "leader": false, "guest": false, "ph": "066b8aa84cbcce637e1709b1d9e6691db1465588451d31259b3e69914eb26c9f"}, {"id": "114900025", "name": "呂承恩", "group": 5, "email": "student25@example.com", "leader": true, "guest": false, "ph": "fe490cc05ef2b830181be6713edb2b3a2f5fe3e4e586ac1b391de12ca1d1d384"}, {"id": "114900026", "name": "江姿穎", "group": 5, "email": "student26@example.com", "leader": false, "guest": false, "ph": "cd6c4fdaf5e42d837dce80304d25185a099af90259a58759caf4905b4b241afe"}, {"id": "114900027", "name": "何家瑋", "group": 5, "email": "student27@example.com", "leader": false, "guest": false, "ph": "be288d381d3874f2464b4d1b27fc88dd56794e6b77d39accd70f67380d8be74d"}, {"id": "114900028", "name": "羅若涵", "group": 5, "email": "student28@example.com", "leader": false, "guest": false, "ph": "179d79fbdd0e086255b8a3bcedc7fdad53e9a4a086ed4ce2b27a141a153b7f11"}, {"id": "114900029", "name": "高冠廷", "group": 5, "email": "student29@example.com", "leader": false, "guest": false, "ph": "4a5401f87467f1966116657c90864ba6bbe702e0c04187f0e5f81621a15f00e3"}, {"id": "GUEST02", "name": "潘沛珊", "group": 5, "email": "student30@example.com", "leader": false, "guest": true, "ph": "d9adb2c38b753183cffc9f63fc632c4bbac040bf8f1925803976f5e22326722c"}, {"id": "114900031", "name": "簡彥廷", "group": 6, "email": "student31@example.com", "leader": true, "guest": false, "ph": "96a120ebb8eb2abc110d1555a8638b7677a48230bc129d89be540bbe99c11b31"}, {"id": "114900032", "name": "朱心怡", "group": 6, "email": "student32@example.com", "leader": false, "guest": false, "ph": "8400120fa3405dc2eb7ce0230dd2a7ffb55de87a0ea4485dc9d87ad838b35732"}, {"id": "114900033", "name": "彭志遠", "group": 6, "email": "student33@example.com", "leader": false, "guest": false, "ph": "380aacac42ec209256545e27dc551a6e1a79ac9445d706dd5f09581b6db91b1d"}, {"id": "114900034", "name": "游雅雯", "group": 6, "email": "student34@example.com", "leader": false, "guest": false, "ph": "18164e712ba0958cdb3dbece90b84dcfecae7f6bd86f598003d30f41d1ad3689"}, {"id": "114900035", "name": "詹明哲", "group": 6, "email": "student35@example.com", "leader": false, "guest": false, "ph": "b5453c8e69fadfe974d6608a982676659f4959621bb68556df81eb9e03e3a8fb"}, {"id": "114900036", "name": "沈欣妤", "group": 6, "email": "student36@example.com", "leader": false, "guest": false, "ph": "e92d1a70c6939a3eaedc53085995d345b2c0b6cb4e9f8219fe1c18e0cf92e59c"}, {"id": "114900037", "name": "韓立群", "group": 7, "email": "student37@example.com", "leader": true, "guest": false, "ph": "0bea4d392ade29bf84f526a25de5f6e13ede30ec4f7d2aa98b909609e0603fb4"}, {"id": "114900038", "name": "馮書瑜", "group": 7, "email": "student38@example.com", "leader": false, "guest": false, "ph": "38f370b208578d38ef5eaebf4956eba9c60ce3d082fb3b08a07377ddd9101f7d"}, {"id": "114900039", "name": "董浩然", "group": 7, "email": "student39@example.com", "leader": false, "guest": false, "ph": "045401ab1062dd09f57746f99034fff15cc0b4a010a967695a0f844dbaf02022"}, {"id": "114900040", "name": "程筱涵", "group": 7, "email": "student40@example.com", "leader": false, "guest": false, "ph": "35c15c8a93fcac589455de9bc66ade6c88ba6b35a6264c03b40592ac5a086eaf"}, {"id": "114900041", "name": "袁哲維", "group": 7, "email": "student41@example.com", "leader": false, "guest": false, "ph": "c20808c9012fb8ae5eb47b176cc11148d00ba81493dcfe5d2377e1535d01cbf6"}, {"id": "114900042", "name": "鄧亦晴", "group": 7, "email": "student42@example.com", "leader": false, "guest": false, "ph": "8c48e7758be4d97c2234ec965edeb5aea0f3e7f913306423c41f86062aac113f"}];
+/*CONFIG:END*/
+const SAMPLE=[
+"在這學期的課程中，我最大的收穫是學會從不同角度看待同一個問題。過去我習慣只從自己的經驗出發，認為只要努力就能解決大部分的困難，但透過小組討論與課堂案例，我發現許多問題背後都有制度、文化與資源分配的因素。",
+"以我們小組研究的主題為例，一開始大家各有想法，討論常常陷入僵局。後來我們決定先各自蒐集資料，再把資料放在一起比對，才發現彼此的觀點其實可以互補。這個過程讓我理解，合作不是要求每個人想法一致，而是讓不同的想法有被聽見的空間。",
+"此外，老師在課堂上提到的幾個觀念，也讓我重新思考自己未來的方向。我開始注意到，專業能力固然重要，但能不能清楚表達、能不能理解他人的需求，往往才是決定一件事能否順利推動的關鍵。",
+"在撰寫報告的過程中，我也遇到不少挑戰。資料來源良莠不齊，有些網路文章看似有理，仔細查證後卻發現缺乏根據。這讓我養成了查核資料出處的習慣，也更能分辨意見與事實的差別。",
+"總結來說，這門課不只讓我學到知識，更讓我學會反思。我希望未來能把這些經驗帶到其他課程與生活中，持續練習從多元角度思考，並且在團隊中扮演更積極的角色。"];
+const COMMENTS=["架構清楚，但數據來源可以再補充","上台表達很流暢","提案很有創意，可行性要再評估","","投影片字太小，後排看不清楚",""];
+const DB={students:[],essays:{},versions:{},drafts:{},pdfs:{},peer:{},finals:{},tEssay:{},tGroup:{},
+  settings:{deadline:new Date(2026,10,22,23,0,0).getTime(),peerOn:true}};
+const PEER=()=>DB.settings.peerOn!==false;
+DB.students=ROSTER.map(r=>({...r}));
+if(CONFIG.demo){const b=document.getElementById("demoBar");b.hidden=false;b.textContent="展示模式：資料只存在這個瀏覽器分頁裡，重新整理就會清空"}
+// 測試用：填入示範資料（老師後台按鈕觸發）
+function loadSampleData(){
+  Object.assign(DB,{essays:{},versions:{},drafts:{},pdfs:{},peer:{},finals:{},tEssay:{},tGroup:{}});
+  const missing=new Set([3,8,9,14,22,29,33]), drafts=new Set([18,26]);
+  DB.students.forEach((s,idx)=>{
+    if(missing.has(idx)) return;
+    const paras=SAMPLE.slice(0,3+(idx%3)), title=["我的課程學習反思","從小組合作看見的自己","課程心得與未來方向"][idx%3], at=Date.now()-(idx*3600e3);
+    if(drafts.has(idx)){DB.drafts[s.id]={title,text:paras.join("\n"),at};return}
+    DB.versions[s.id]=[];
+    if(idx%4===0) DB.versions[s.id].push({title,text:paras.slice(0,2).join("\n"),at:at-86400e3});
+    DB.versions[s.id].push({title,text:paras.join("\n"),at});
+  });
+  DB.students.forEach(s=>syncEssay(s.id));
+  for(let g=1;g<=7;g++) if(g!==6) DB.pdfs[g]={kind:"sample",name:`第${g}組_簡報.pdf`,orig:`期末報告final(${g}).pdf`,at:Date.now()-g*7200e3};
+  const rnd=(a,b,sd)=>a+Math.floor((Math.sin(sd)*10000%1+1)%1*(b-a+1));
+  DB.students.forEach((s,idx)=>{
+    if(s.group===1&&idx===4) return;
+    if(s.group>1&&idx%2) return;
+    if(s.group===6) return;
+    DB.peer[s.id]={};
+    for(let g=1;g<=7;g++) if(g!==6&&s.group!==6) DB.peer[s.id][g]={score:rnd(72,95,idx*7+g),comment:COMMENTS[(idx+g)%6]};
+  });
+}
+function clearAllData(){Object.assign(DB,{essays:{},versions:{},drafts:{},pdfs:{},peer:{},finals:{},tEssay:{},tGroup:{}})}
+
+/* ================= 工具 ================= */
+const $=s=>document.querySelector(s);
+const $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const countChars=t=>(t||"").replace(/\s/g,"").length;
+const LIMIT=1500;
+const ALLG=[1,2,3,4,5,6,7];
+const pad=n=>String(n).padStart(2,"0");
+const fmtTime=t=>{const d=new Date(t);return `${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`};
+const groupMembers=g=>DB.students.filter(s=>s.group===g);
+const byId=id=>DB.students.find(s=>s.id===id);
+const emailOf=s=>s.email;
+const showId=s=>s.guest?"特邀":s.id;
+async function sha(t){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}
+function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove("show"),2600)}
+function syncEssay(id){
+  const vs=DB.versions[id]||[], d=DB.drafts[id];
+  if(vs.length){const l=vs[vs.length-1];DB.essays[id]={title:l.title,text:l.text,at:l.at,status:"submitted",v:vs.length}}
+  else if(d) DB.essays[id]={...d,status:"draft"};
+  else delete DB.essays[id];
+}
+function essayVer(id,v){const x=DB.versions[id]?.[v-1];return x?{...x,status:"submitted",v}:null}
+const essayStatus=id=>{const e=DB.essays[id];return !e?"none":e.status};
+const isLate=t=>t>DB.settings.deadline;
+function statusPill(id){
+  const st=essayStatus(id), e=DB.essays[id];
+  if(st==="submitted") return `<span class="pill ok">已交 v${e.v}</span>${isLate(e.at)?' <span class="pill no">遲交</span>':""}`;
+  if(st==="draft") return '<span class="pill draft">寫了還沒交</span>';
+  return '<span class="pill no">未繳交</span>';
+}
+function countdown(){
+  const ms=DB.settings.deadline-Date.now(), dl=fmtTime(DB.settings.deadline);
+  if(ms<=0) return `<span class="deadline over">⏰ 已於 ${dl} 截止</span>`;
+  const d=Math.floor(ms/864e5), h=Math.floor(ms%864e5/36e5), m=Math.floor(ms%36e5/6e4);
+  return `<span class="deadline">⏰ 截止 ${dl}，還有 ${d?d+" 天 ":""}${d||h?h+" 小時":m+" 分鐘"}</span>`;
+}
+const ownUploaded=u=>!!DB.pdfs[u.group];
+const notUploaded=()=>ALLG.filter(g=>!DB.pdfs[g]);
+const WD="日一二三四五六";
+const fmtDue=t=>{const d=new Date(t);return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}（${WD[d.getDay()]}）${pad(d.getHours())}:${pad(d.getMinutes())}`};
+function cdParts(){const ms=Math.max(0,DB.settings.deadline-Date.now());return {ms,d:Math.floor(ms/864e5),h:Math.floor(ms%864e5/36e5),m:Math.floor(ms%36e5/6e4),s:Math.floor(ms%6e4/1e3)}}
+function cdLevel(ms){return ms<=0?"over":ms<=3*864e5?"hot":ms<=7*864e5?"warn":""}
+function cdMsg(ms){return ms<=0?"已經截止，現在繳交會標記為遲交":ms<=864e5?"最後一天！現在就去完成吧":ms<=3*864e5?"只剩最後幾天了，別拖到最後一刻":ms<=7*864e5?"剩不到一週，開始動筆吧":"提早完成，最後一週就不用趕"}
+function bigCountdown(){
+  const c=cdParts(), lv=cdLevel(c.ms);
+  return `<section class="cdh ${lv}" data-cdh>
+    <div class="lb">${c.ms<=0?"作業已經截止":"距離作業截止還有"}</div>
+    <div class="cd"><div><b data-cd="d">${c.d}</b><span>天</span></div><i>:</i><div><b data-cd="h">${pad(c.h)}</b><span>時</span></div><i>:</i><div><b data-cd="m">${pad(c.m)}</b><span>分</span></div><i>:</i><div><b data-cd="s">${pad(c.s)}</b><span>秒</span></div></div>
+    <div class="due">截止時間：${fmtDue(DB.settings.deadline)}｜個人反思心得、小組報告</div>
+    <div class="msg" data-cd="msg">${cdMsg(c.ms)}</div>
+  </section>`;
+}
+setInterval(()=>{const el=document.querySelector("[data-cdh]");if(!el)return;const c=cdParts();
+  for(const k of ["d","h","m","s"]){const x=el.querySelector(`[data-cd="${k}"]`);if(x)x.textContent=k==="d"?c[k]:pad(c[k])}
+  el.className="cdh "+cdLevel(c.ms);el.querySelector('[data-cd="msg"]').textContent=cdMsg(c.ms)},1000);
+const peerDone=id=>Object.keys(DB.peer[id]||{}).length;
+function avgFor(g,t){const v=groupMembers(g).map(s=>DB.peer[s.id]?.[t]?.score).filter(x=>x!=null);return v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length*10)/10:null}
+function peerReceived(t){const v=Object.values(DB.finals).map(f=>f.scores[t]).filter(x=>x!=null);return v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length*10)/10:null}
+function rankReceived(t){const v=Object.values(DB.finals).map(f=>f.ranks?.[t]).filter(x=>x!=null);return v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length*100)/100:null}
+
+/* ================= 對話框與忙碌 ================= */
+function dialog({title,body="",buttons=[{l:"確定",v:true,primary:true}],wide=false,onMount}){
+  return new Promise(res=>{
+    $("#modal").innerHTML=`<div class="overlay"><div class="card ${wide?"wide":""}" role="dialog" aria-modal="true">
+      ${title?`<h2 style="margin-bottom:10px">${title}</h2>`:""}<div>${body}</div>
+      <div class="row" style="justify-content:flex-end;margin-top:18px">${buttons.map((b,i)=>`<button class="btn ${b.primary?"primary":""}" data-dv="${i}">${b.l}</button>`).join("")}</div>
+    </div></div>`;
+    $$("[data-dv]").forEach(b=>b.onclick=()=>{const v=buttons[+b.dataset.dv].v;$("#modal").innerHTML="";res(v)});
+    onMount&&onMount();
+  });
+}
+function busy(msg,pct){
+  if(msg==null){$("#busy").innerHTML="";return}
+  $("#busy").innerHTML=`<div class="overlay" style="z-index:80"><div class="card" style="max-width:380px;text-align:center"><b>${esc(msg)}</b>${pct!=null?`<div class="bar" style="margin-top:12px"><i style="width:${pct}%"></i></div>`:""}</div></div>`;
+}
+
+/* ================= 狀態與導覽 ================= */
+let S={user:null,tab:"home",after:null,sel:null,ver:null,draft:null,mv:"edit",leave:null,tFilter:"all"};
+let ZOOM=1; try{ZOOM=+localStorage.getItem("hwZoom")||1}catch(e){}
+function go(tab,sel=null){S.tab=tab;S.sel=sel;render()}
+const PUBLIC_TABS=["home","brief"];
+async function nav(tab,sel=null){
+  if(["peer","gsubmit","matrix"].includes(tab)&&!PEER()){toast("老師目前沒有開放組間互評");return}
+  if(!S.user&&!PUBLIC_TABS.includes(tab)){openLogin(tab);return}
+  if(S.leave){const r=S.leave(); if(r){
+    const c=await dialog({title:"評分還沒儲存",body:r.msg,buttons:[{l:"取消",v:"cancel"},{l:"不儲存",v:"discard"},{l:"儲存後離開",v:"save",primary:true}]});
+    if(c==="cancel") return; if(c==="save"&&!r.save()) return;
+  }}
+  go(tab,sel);
+}
+
+/* ================= A4 排版引擎（13.5～14pt、兩倍行高） ================= */
+const PAGE={w:794,h:1123,m:76}, FS_MAX=14, FS_MIN=13.5, FS_STEP=0.25, LINE=2, PGAP=0.5; // 字級 14→13.5pt 自動調整、兩倍行高、段落間距半行
+let measurer;
+function flowHTML(stu,essay,lh,fs){
+  const px=fs*96/72, gap=Math.round(lh*PGAP);
+  const paras=(essay.text||"").split(/\n/).filter(p=>p.trim()!=="").map((p,i)=>`<p style="${i?`margin-top:${gap}px`:""}">${esc(p)}</p>`).join("");
+  return `<div class="flow" style="font-size:${px}px;line-height:${lh}px;width:${PAGE.w-2*PAGE.m}px">
+    <div class="hd" data-hd style="font-size:${px*0.95}px;line-height:1.7;padding-bottom:10px;margin-bottom:${Math.round(lh*0.6)}px">
+      <div class="ttl" style="font-size:${px*1.2}px">${esc(essay.title||"（未填寫題目）")}</div>
+      <div class="meta"><span>${esc(showId(stu))}</span><span>第 ${stu.group} 組</span><span>${esc(stu.name)}</span></div>
+    </div><div>${paras}</div></div>`;
+}
+// 依實際每一行的位置分頁，確保不會把一行字切成兩半
+function layout(stu,essay){
+  let L; for(let fs=FS_MAX;fs>=FS_MIN-1e-6;fs-=FS_STEP){L=layoutAt(stu,essay,fs);if(L.fits)break} return L;
+}
+function layoutAt(stu,essay,fs){
+  if(!measurer){measurer=document.createElement("div");measurer.style.cssText="position:absolute;left:-99999px;top:0;visibility:hidden";measurer.className="page";document.body.appendChild(measurer)}
+  const lh=Math.round(fs*96/72*LINE), avail=PAGE.h-2*PAGE.m; // 頁碼放在下邊界內，不佔內文空間
+  measurer.innerHTML=flowHTML(stu,essay,lh,fs);
+  const flow=measurer.querySelector(".flow"), base=flow.getBoundingClientRect().top, hd=flow.querySelector("[data-hd]");
+  const units=[{t:0,b:hd.getBoundingClientRect().bottom-base}];
+  flow.querySelectorAll("p").forEach(p=>{
+    const r=document.createRange(); r.selectNodeContents(p);
+    const tops=new Map(); [...r.getClientRects()].forEach(x=>{const t=Math.round(x.top-base);if(!tops.has(t))tops.set(t,t)});
+    const pr=p.getBoundingClientRect(), pt=pr.top-base, n=Math.max(1,Math.round(pr.height/lh));
+    for(let k=0;k<n;k++) units.push({t:pt+k*lh,b:pt+(k+1)*lh});
+  });
+  const starts=[0], heights=[]; let st=0, last=0;
+  units.forEach(u=>{ if(u.b-st>avail){heights.push(last-st);st=u.t;starts.push(st)} last=u.b; });
+  heights.push(last-st);
+  return {fs,lh,starts,heights,pages:starts.length,fits:starts.length<=2,total:last};
+}
+function renderPages(container,stu,essay,width){
+  const L=layout(stu,essay), scale=width/PAGE.w, shown=Math.min(2,L.pages);
+  let html="";
+  for(let i=0;i<shown;i++){
+    html+=`<div class="page-shell" style="width:${PAGE.w*scale}px;height:${PAGE.h*scale}px"><div class="page" style="transform:scale(${scale})">
+      <div class="clip" style="height:${L.heights[i]}px">${flowHTML(stu,essay,L.lh,L.fs).replace('class="flow" style="','class="flow" style="top:'+(-L.starts[i])+'px;')}</div>
+      <div class="pno">第 ${i+1} 頁，共 ${shown} 頁${essay.v?`｜v${essay.v}｜${fmtTime(essay.at)} 繳交`:""}</div></div></div>`;
+  }
+  container.innerHTML=html;
+  return L;
+}
+
+/* ================= PDF 與下載 ================= */
+const pdfName=(s,v)=>`第${s.group}組_${s.name}_${s.id}${v?`_v${v}`:""}.pdf`;
+let pdfHost;
+async function addEssayPages(doc,stu,essay,first){
+  if(!pdfHost){pdfHost=document.createElement("div");pdfHost.style.cssText="position:fixed;left:-10000px;top:0;width:794px";document.body.appendChild(pdfHost)}
+  renderPages(pdfHost,stu,essay,PAGE.w);
+  const pages=[...pdfHost.querySelectorAll(".page-shell")];
+  for(let i=0;i<pages.length;i++){
+    const cv=await html2canvas(pages[i],{scale:1.7,backgroundColor:"#ffffff",logging:false});
+    if(!(first&&i===0)) doc.addPage("a4","portrait");
+    doc.addImage(cv.toDataURL("image/jpeg",0.82),"JPEG",0,0,210,297);
+  }
+  pdfHost.innerHTML="";
+}
+const newDoc=()=>new window.jspdf.jsPDF({unit:"mm",format:"a4",orientation:"portrait",compress:true});
+async function essayBlob(stu,essay){const d=newDoc();await addEssayPages(d,stu,essay,true);return d.output("blob")}
+async function saveFile(filename,blob){
+  try{const dl=window.claude?await window.claude.use("downloads"):null; if(dl){await dl.save({filename,data:blob});return true}}
+  catch(e){
+    if(e&&e.code==="declined"){toast("已取消下載");return false}
+    if(!(e&&["unavailable","not_granted","capability_disabled","capability_removed"].includes(e.code))){toast("下載失敗，請再試一次");return false}
+  }
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000);return true;
+}
+async function downloadOne(sid,v){
+  const stu=byId(sid), e=v?essayVer(sid,v):DB.essays[sid]; if(!e) return;
+  busy("正在產生 PDF…");
+  try{const blob=await essayBlob(stu,e);busy();await saveFile(pdfName(stu,e.v),blob)}catch(err){busy();toast("產生 PDF 失敗")}
+}
+function exportList(onlySub){return DB.students.filter(s=>DB.essays[s.id]&&(!onlySub||DB.essays[s.id].status==="submitted")).sort((a,b)=>a.group-b.group||a.id.localeCompare(b.id))}
+async function exportMerged(onlySub){
+  const list=exportList(onlySub); if(!list.length){toast("沒有可下載的作業");return}
+  const doc=newDoc();
+  try{for(let i=0;i<list.length;i++){busy(`正在合併 PDF（${i+1} / ${list.length}）`,Math.round(i/list.length*100));await addEssayPages(doc,list[i],DB.essays[list[i].id],i===0)}
+    busy("準備下載…",100);const blob=doc.output("blob");busy();await saveFile(`全班個人作業_合併_${list.length}份.pdf`,blob)}
+  catch(e){busy();toast("產生 PDF 失敗")}
+}
+async function exportZip(onlySub){
+  const list=exportList(onlySub); if(!list.length){toast("沒有可下載的作業");return}
+  const zip=new JSZip();
+  try{for(let i=0;i<list.length;i++){busy(`正在產生個別 PDF（${i+1} / ${list.length}）`,Math.round(i/list.length*100));const s=list[i];zip.folder(`第${s.group}組`).file(pdfName(s,DB.essays[s.id].v),await essayBlob(s,DB.essays[s.id]))}
+    busy("壓縮中…",100);const blob=await zip.generateAsync({type:"blob"});busy();await saveFile(`全班個人作業_每人一份_${list.length}份.zip`,blob)}
+  catch(e){busy();toast("產生檔案失敗")}
+}
+const csv=rows=>"﻿"+rows.map(r=>r.map(c=>{c=String(c??"");return /[",\n]/.test(c)?`"${c.replace(/"/g,'""')}"`:c}).join(",")).join("\r\n");
+const dlCsv=(name,rows)=>saveFile(name,new Blob([csv(rows)],{type:"text/csv"}));
+const CSVS={
+  ind:()=>dlCsv("個人作業成績.csv",[["學號","姓名","組別","繳交狀態","最新版本","最後繳交時間","是否遲交","字數","老師評分","評語"],...DB.students.map(s=>{const e=DB.essays[s.id],t=DB.tEssay[s.id];return [s.id,s.name,s.group,{submitted:"已繳交",draft:"未繳交（有草稿）",none:"未繳交"}[essayStatus(s.id)],e?.v?`v${e.v}`:"",e?.v?fmtTime(e.at):"",e?.v&&isLate(e.at)?"遲交":"",e?countChars(e.text):"",t?.score,t?.comment]})]),
+  fin:()=>dlCsv("小組互評評語.csv",[["評分組","被評組","分數","名次","評語","評分組整體評語","送出時間"],...ALLG.flatMap(g=>{const f=DB.finals[g];return f?ALLG.map(t=>[g,t,f.scores[t],f.ranks[t],f.comments?.[t],t===ALLG[0]?f.overall:"",fmtTime(f.at)]):[]})]),
+  grp:()=>dlCsv("小組成績.csv",[["組別","主題","互評平均分數","互評平均名次","老師評分","評語"],...ALLG.map(g=>[g,TOPICS[g-1],peerReceived(g),rankReceived(g),DB.tGroup[g]?.score,DB.tGroup[g]?.comment])]),
+  peer:()=>dlCsv("個人互評明細.csv",[["學號","姓名","組別",...ALLG.flatMap(t=>[`第${t}組分數`,`第${t}組評語`])],...DB.students.map(s=>[s.id,s.name,s.group,...ALLG.flatMap(t=>[DB.peer[s.id]?.[t]?.score,DB.peer[s.id]?.[t]?.comment])])])
+};
+function downloadMenu(){
+  return `<div class="row"><button class="btn primary" data-dlm="merged">⬇ 下載全部作業（合併成一份 PDF）</button>
+  <details class="menu"><summary class="btn">更多下載 ▾</summary><div class="items">
+    <button class="btn" data-dlm="zip">個人作業：每人一份（ZIP 壓縮檔）</button>
+    <button class="btn" data-dlm="ind">個人作業成績（Excel 可開）</button>
+    <button class="btn" data-dlm="grp">小組成績（Excel 可開）</button>
+    <button class="btn" data-dlm="peer">個人互評明細（Excel 可開）</button>
+    <button class="btn" data-dlm="fin">小組互評分數與評語（Excel 可開）</button>
+    <label><input type="checkbox" data-onlysub checked style="width:18px;height:18px">PDF 只包含已繳交的（不含草稿）</label>
+  </div></details></div>`;
+}
+function bindDownloadMenu(){
+  $$("[data-dlm]").forEach(b=>b.onclick=()=>{
+    const only=$("[data-onlysub]")?.checked??true; b.closest("details")?.removeAttribute("open");
+    ({merged:()=>exportMerged(only),zip:()=>exportZip(only),ind:CSVS.ind,grp:CSVS.grp,peer:CSVS.peer,fin:CSVS.fin})[b.dataset.dlm]();
+  });
+}
+
+/* ================= 登入 ================= */
+function bindLogin(){
+  $("#loginForm").onsubmit=e=>{e.preventDefault();
+    const id=$("#lid").value.trim().toUpperCase(), pw=$("#lpw").value.replace(/\D/g,""), s=byId(id);
+    if(!s){$("#lerr").textContent="找不到這個學號，請再確認一次（特邀學員請輸入 GUEST01 或 GUEST02）";return}
+    sha("hw:"+s.id+":"+pw).then(h=>{if(h!==s.ph){$("#lerr").textContent="手機號碼不正確，請輸入 09 開頭的 10 碼";return}login(s)});
+  };
+  $$("[data-demo]").forEach(b=>b.onclick=()=>b.dataset.demo==="teacher"?login({teacher:true}):login(byId(b.dataset.demo)));
+}
+function viewTeacherLogin(){
+  return `<div class="login-wrap"><div class="card login"><h1>老師登入</h1>
+    <form id="tForm"><label class="field"><span>帳號</span><input id="tid"></label><label class="field"><span>密碼</span><input id="tpw" type="password"></label>
+    <div class="err" id="terr"></div><button class="btn primary big" style="width:100%">登入</button></form>
+    ${CONFIG.demo?`<div class="muted" style="margin-top:10px;font-size:15px">展示模式：帳號 teacher，密碼 1234</div>`:""}
+    <div style="text-align:center;margin-top:12px"><a href="#" id="backLogin">回首頁</a></div></div></div>`;
+}
+function bindTLogin(){
+  $("#tForm").onsubmit=e=>{e.preventDefault();const id=$("#tid").value.trim(),pw=$("#tpw").value;
+    sha("teacher:"+id+":"+pw).then(h=>{if(id===CONFIG.teacherId&&h===CONFIG.teacherPwHash)login({teacher:true});else $("#terr").textContent="帳號或密碼錯誤"})};
+  $("#backLogin").onclick=e=>{e.preventDefault();S.tab="home";render()};
+}
+const LEADER_TABS=["upload","gsubmit","members"];
+function login(u){
+  let tab=S.after||S.tab||"home"; S.after=null;
+  if(u.teacher){if(!["home","brief"].includes(tab))tab="home"}
+  else if(LEADER_TABS.includes(tab)&&!u.leader){tab="home";setTimeout(()=>toast("這個功能只有組長能用，已帶你回首頁"),50)}
+  if(tab==="tlogin") tab="home";
+  S={...S,user:u,tab,sel:null,ver:null,draft:null,leave:null};render();
+  if(!u.teacher) setTimeout(()=>toast(`歡迎，${u.name}`),tab==="home"?0:800);
+}
+const AFTER_TXT={essay:"寫個人反思心得",peer:"幫各組評分",upload:"上傳小組報告",gsubmit:"送出小組評分",members:"查看組員狀況",matrix:"看全組評分彙整"};
+function openLogin(after){
+  S.after=after||null;
+  const quick=[...ALLG.map(g=>DB.students.find(x=>x.group===g&&x.leader)),DB.students.find(x=>x.group===1&&!x.leader),DB.students.find(x=>x.id==="GUEST01")];
+  $("#modal").innerHTML=`<div class="overlay" id="loginOv"><div class="card loginbox" role="dialog" aria-modal="true">
+    <div class="row"><h2 style="margin:0">學員登入</h2><span class="spacer"></span><button class="btn small ghost" id="lclose" aria-label="關閉">✕</button></div>
+    <div class="muted" style="margin-top:4px">${after&&AFTER_TXT[after]?`登入後就可以${AFTER_TXT[after]}。`:"登入後可以寫作業、評分、看自己的繳交狀態。"}</div>
+    <form id="loginForm">
+      <label class="field"><span>學號</span><input id="lid" autocomplete="username" placeholder="例如 114900001"></label>
+      <label class="field"><span>密碼：你的手機號碼</span><input id="lpw" type="password" inputmode="numeric" autocomplete="current-password" placeholder="例如 0912345678"></label>
+      <div class="err" id="lerr"></div>
+      <button class="btn primary big" style="width:100%">登入</button>
+    </form>
+    <div class="muted" style="font-size:15px;margin-top:10px">特邀學員請用 GUEST01 或 GUEST02 登入。</div>
+    ${!CONFIG.demo?"":`<div class="demo-accts"><b>測試用快速登入</b>（展示模式才有這一區）
+      ${quick.map(x=>`<button class="btn small" data-demo="${x.id}">第 ${x.group} 組${x.leader?"組長":x.guest?"特邀":"組員"}：${esc(x.name)}</button>`).join("")}
+      <button class="btn small" data-demo="teacher">老師後台</button>
+    </div>`}</div></div>`;
+  bindLogin();
+  $("#lclose").onclick=()=>{$("#modal").innerHTML="";S.after=null};
+  $("#loginOv").onclick=e=>{if(e.target.id==="loginOv"){$("#modal").innerHTML="";S.after=null}};
+  setTimeout(()=>$("#lid")?.focus(),50);
+}
+
+/* ================= 外框 ================= */
+const ZL=[0.9,1,1.2,1.4];
+function shell(tabs,body){
+  const u=S.user;
+  const who=u.teacher?"老師":`第 ${u.group} 組｜${esc(u.name)}${u.leader?' <span class="pill lead">組長</span>':""}`;
+  return `<header class="top"><h1>課程作業繳交系統</h1><div class="row" style="gap:10px">
+    <span class="who">${who}</span>
+    <span class="fs" title="調整字的大小"><button data-z="-1" aria-label="字變小">A−</button><button data-z="0" class="on" style="min-width:64px">${Math.round(ZOOM*100)}%</button><button data-z="1" aria-label="字變大">A+</button></span>
+    <button class="btn small" id="logout">登出</button></div></header>
+  <main><nav class="tabs">${tabs.map(t=>`<button class="tab ${S.tab===t.k?"on":""}" data-tab="${t.k}">${t.l}${t.b?`<span class="badge">${t.b}</span>`:""}</button>`).join("")}</nav>${body}</main>`;
+}
+function applyZoom(){$("#zoomRoot").style.zoom=ZOOM}
+
+/* ================= 公開首頁（不用登入） ================= */
+function publicShell(body){
+  return `<header class="top"><h1>課程作業繳交系統</h1><div class="row" style="gap:10px">
+    <span class="fs" title="調整字的大小"><button data-z="-1" aria-label="字變小">A−</button><button data-z="0" class="on" style="min-width:64px">${Math.round(ZOOM*100)}%</button><button data-z="1" aria-label="字變大">A+</button></span>
+    <button class="btn primary small" id="openLogin">學員登入</button></div></header>
+  <main><nav class="tabs">${[["home","首頁"],["brief","作業說明"]].map(([k,l])=>`<button class="tab ${S.tab===k?"on":""}" data-tab="${k}">${l}</button>`).join("")}</nav>${body}
+  <div style="text-align:center;margin-top:40px"><a href="#" id="tLogin" class="muted" style="font-size:15px">老師登入</a></div></main>`;
+}
+function viewPublicHome(){
+  return `${bigCountdown()}
+  <div class="page-head"><div><h2>ASTM 課間作業</h2><div class="sub">第一次與第二次領袖營之間，要完成下面兩份作業。</div></div></div>
+  <div class="pub-actions">
+    <div class="card"><div class="muted" style="font-size:15px">個人作業｜每個人都要交</div><div class="t">✍️ 個人反思心得</div><div class="d">總結第一次領袖營的學習反思，不超過 1500 字。直接在系統打字，會自動排版成兩頁 A4。</div><button class="btn primary big" data-go="essay">去寫心得</button></div>
+    <div class="card"><div class="muted" style="font-size:15px">小組作業｜由組長上傳</div><div class="t">📊 小組報告</div><div class="d">${BRIEF.cases.map(c=>`${esc(c.short)}（${esc(c.part)}）`).join(" ＋ ")}，合成一份 PDF。</div><button class="btn big" data-go="upload">組長上傳報告</button></div>
+    ${PEER()?`<div class="card"><div class="muted" style="font-size:15px">小組上傳後開放</div><div class="t">⭐ 幫各組評分</div><div class="d">看完各組的簡報後給分。本組簡報上傳後才能開始。</div><button class="btn big" data-go="peer">去評分</button></div>`:""}
+  </div>
+  <div class="hw-banner" style="margin-top:20px"><div style="font-size:30px">📋</div><div style="flex:1;min-width:220px"><b style="font-size:18px">還不清楚要交什麼？</b><div class="muted">題目、頁數、討論問題和補充資料，都整理在作業說明裡，不用登入就能看。</div></div><button class="btn" data-go="brief">看作業說明</button></div>`;
+}
+function bindPublic(){
+  $$("[data-go]").forEach(b=>b.onclick=e=>{e.preventDefault();nav(b.dataset.go)});
+}
+
+/* ================= 學生：首頁 ================= */
+function viewHome(){
+  const u=S.user, st=essayStatus(u.id), e=DB.essays[u.id], pd=peerDone(u.id), fin=DB.finals[u.group];
+  const mem=groupMembers(u.group), memDone=mem.filter(s=>peerDone(s.id)===7).length;
+  const T=[];
+  T.push({cls:st==="submitted"?"done":"",t:"我的個人作業",
+    d:st==="submitted"?`已繳交第 ${e.v} 版（${fmtTime(e.at)}）${isLate(e.at)?"，遲交":""}。要修改可以再交一次。`:st==="draft"?"已經寫了一部分，記得按繳交。":"還沒開始寫。直接在系統打字，會自動排版成 A4。",
+    btn:st==="submitted"?"查看或修改":st==="draft"?"繼續寫":"開始寫",go:"essay"});
+  const own=ownUploaded(u), nu=notUploaded();
+  if(u.leader) T.push({cls:own?"done":"",t:"上傳本組簡報（組長）",d:own?`已上傳 ${esc(DB.pdfs[u.group].name)}（${fmtTime(DB.pdfs[u.group].at)}）`:PEER()?"還沒上傳。<b>上傳後，你和組員才能開始幫各組評分。</b>":"還沒上傳。請把三個部分合成一份 PDF 上傳。",btn:own?"重新上傳":"上傳簡報",go:"upload"});
+  if(PEER()) T.push({cls:!own?"wait":pd===7?"done":"",t:"幫各組評分",
+    d:!own?(u.leader?"先完成上一步：上傳本組簡報。":"要等組長上傳本組簡報後才能開始。"):pd===7?"七組都評完了，可以隨時回去修改。":`已評 ${pd} / 7 組。看各組簡報，給 0 到 100 分。${nu.length?`（第 ${nu.join("、")} 組還沒上傳簡報，上傳後才能評）`:""}`,
+    btn:!own?"查看":pd===7?"查看我的評分":pd?"繼續評分":"開始評分",go:"peer"});
+  if(u.leader){
+    if(PEER()) T.push({cls:fin?"done":(memDone<mem.length||nu.length)?"wait":"",t:"送出小組評分（組長）",d:fin?`已在 ${fmtTime(fin.at)} 送出，可以修改後重送。`:nu.length?`要等七組都上傳簡報才能送出（還差第 ${nu.join("、")} 組）。組員已評完 ${memDone} / ${mem.length} 人。`:`組員已評完 ${memDone} / ${mem.length} 人。參考全組分數後，替七組打分並排名。`,btn:fin?"查看或修改":"前往送出",go:"gsubmit"});
+    const miss=mem.filter(s=>essayStatus(s.id)!=="submitted");
+    T.push({cls:miss.length?"":"done",t:"確認組員都交了個人作業",d:miss.length?`還有 ${miss.length} 人沒交：${miss.map(s=>esc(s.name)).join("、")}`:"全組都交了！",btn:miss.length?"複製 LINE 提醒":"查看",go:"members"});
+  }else{
+    if(PEER()) T.push({cls:fin?"done":"wait",t:"看全組評分彙整",d:fin?"組長已送出本組的小組評分。":`組長還沒送出。組內已評完 ${memDone} / ${mem.length} 人。`,btn:"查看",go:"matrix"});
+  }
+  return `${bigCountdown()}<div class="page-head"><div><h2>你好，${esc(u.name)}</h2><div class="sub">下面是你要完成的事，照順序做就可以。</div></div></div>
+  <div class="hw-banner"><div style="font-size:30px">📋</div><div style="flex:1;min-width:220px"><b style="font-size:18px">課間作業：個人反思心得＋小組報告</b><div class="muted">都在 ${fmtTime(DB.settings.deadline)} 截止。題目、頁數和討論問題都在作業說明裡。</div></div><button class="btn" data-go="brief">看作業說明</button></div>
+  <div class="tasks">${T.map((t,i)=>`<div class="card task ${t.cls}"><div class="no">${t.cls==="done"?"✓":i+1}</div><div><div class="t">${t.t}</div><div class="d">${t.d}</div></div><div class="act"><button class="btn ${t.cls?"":"primary"}" data-go="${t.go}">${t.btn}</button></div></div>`).join("")}</div>`;
+}
+function bindHome(){$$("[data-go]").forEach(b=>b.onclick=()=>nav(b.dataset.go))}
+
+/* ================= 學生：我的作業 ================= */
+function cleanPaste(t){
+  let n=0; t=t.replace(/\r\n?/g,"\n");
+  const out=[];
+  for(const line of t.split("\n")){
+    let c=line.replace(/^[\s　 ]+|[\s　 ]+$/g,""); if(c!==line) n++;
+    c=c.replace(/[ \t 　]{2,}/g,()=>{n++;return " "});
+    if(c==="") {n++;continue}
+    out.push(c);
+  }
+  return {text:out.join("\n"),n:Math.max(0,n)};
+}
+function viewEssay(){
+  const u=S.user, vs=DB.versions[u.id]||[], last=vs[vs.length-1], d=DB.drafts[u.id];
+  if(!S.draft){const src=d||last;S.draft={title:src?.title||"",text:src?.text||""}}
+  return `<div class="page-head"><div><h2>我的個人作業</h2><div class="sub">總結<b>第一次領袖營學習反思心得</b>，不超過 1500 字。直接打字，旁邊會自動排成 A4。 <a href="#" id="helpT">怎麼用？</a>　<a href="#" data-go="brief">看作業說明</a></div></div><span class="spacer"></span>${countdown()}</div>
+  <div class="help" id="help" hidden><ul>
+    <li>字數上限 ${LIMIT} 字（不含空白），字級 13.5～14pt（系統自動調整）、兩倍行高，最多兩頁。超過兩頁就不能繳交，請刪減文字。</li>
+    <li>打的內容會自動儲存，不用擔心關掉網頁。</li>
+    <li>從 Word 複製貼上也可以，系統會自動清掉多餘的空白和空行。按 Enter 就是換段。</li>
+    <li>繳交後會自動下載 PDF，並寄一封附上 PDF 的確認信到 ${esc(emailOf(u))}。</li>
+    <li>交了還可以改，再交一次就是新版本（v2、v3…），老師看最新版。</li></ul></div>
+  <div class="seg" style="margin-top:12px"><button data-mv="edit" class="${S.mv==="edit"?"on":""}">✎ 編輯</button><button data-mv="preview" class="${S.mv==="preview"?"on":""}">📄 預覽 A4</button></div>
+  <div class="editor" data-mv="${S.mv}" style="margin-top:12px">
+    <div class="edit-col"><div class="card">
+      <div class="row">${statusPill(u.id)}${last?`<span class="muted">最新 v${vs.length}，${fmtTime(last.at)} 繳交</span>`:""}<span class="spacer"></span><span class="saved" id="saved">${d?`已自動儲存 ${fmtTime(d.at)}`:""}</span></div>
+      <label class="field"><span>題目</span><input id="etitle" value="${esc(S.draft.title)}" placeholder="例如：第一次領袖營學習反思心得"></label>
+      <label class="field" style="margin-bottom:0"><span>內文</span><textarea id="etext" placeholder="在這裡打字，或從 Word 貼上…">${esc(S.draft.text)}</textarea></label>
+      <div class="counter" id="ecount"><div class="info"><span id="cmsg"></span><span id="cnum"></span></div><div class="bar"><i id="cbar"></i></div></div>
+      <div class="row" style="margin-top:16px"><button class="btn primary big" id="esubmit" style="flex:1">預覽並繳交${vs.length?`第 ${vs.length+1} 版`:""}</button></div>
+      ${vs.length?`<details class="hist" style="margin-top:18px"><summary>繳交紀錄（共 ${vs.length} 版）</summary>
+        <table><thead><tr><th>版本</th><th>繳交時間</th><th class="num">字數</th><th></th></tr></thead><tbody>
+        ${vs.map((x,i)=>({x,i})).reverse().map(({x,i})=>`<tr><td><b>v${i+1}</b>${i===vs.length-1?' <span class="pill ok">老師看這版</span>':""}${isLate(x.at)?' <span class="pill no">遲交</span>':""}</td><td>${fmtTime(x.at)}</td><td class="num">${countChars(x.text)}</td><td style="text-align:right"><button class="btn small" data-dlv="${i+1}">下載 PDF</button></td></tr>`).join("")}
+        </tbody></table></details>`:""}
+    </div></div>
+    <div class="preview-col"><div class="preview-info"><b>A4 預覽</b><span id="fsinfo" class="muted"></span></div><div id="fitwarn"></div><div class="pages" id="pages"></div></div>
+  </div>`;
+}
+function bindEssay(){
+  const u=S.user;
+  $("#helpT").onclick=e=>{e.preventDefault();$("#help").hidden=!$("#help").hidden};
+  $$("[data-go]").forEach(b=>b.onclick=e=>{e.preventDefault();nav(b.dataset.go)});
+  $$("[data-mv]").forEach(b=>b.onclick=()=>{S.mv=b.dataset.mv;$(".editor").dataset.mv=S.mv;$$("[data-mv]").forEach(x=>x.classList.toggle("on",x.dataset.mv===S.mv));if(S.mv==="preview")upd()});
+  let L=null;
+  const D=S.draft;
+  const upd=()=>{
+    if(!$("#etext")) return;
+    D.title=$("#etitle").value; D.text=$("#etext").value;
+    const n=countChars(S.draft.text), c=$("#ecount");
+    c.className="counter"+(n>LIMIT?" over":n>LIMIT*0.9?" near":"");
+    $("#cnum").textContent=`${n} / ${LIMIT} 字`;
+    $("#cmsg").textContent=n>LIMIT?`超過 ${n-LIMIT} 字，請刪減`:n>LIMIT*0.9?"快到上限了":"";
+    $("#cbar").style.width=Math.min(100,n/LIMIT*100)+"%";
+    const pc=$("#pages"), w=Math.min(pc.clientWidth||560,600);
+    if(pc.offsetParent!==null||!L){L=renderPages(pc,u,S.draft,w)} else L=layout(u,S.draft);
+    $("#fsinfo").textContent=`${L.fs} pt｜兩倍行高｜${L.pages} 頁`;
+    $("#fitwarn").innerHTML=L.fits?"":`<div class="fit-warn">內容超過兩頁，請刪減文字</div>`;
+  };
+  let t1,t2;
+  const autosave=()=>{
+    if($("#etext")){D.title=$("#etitle").value;D.text=$("#etext").value}
+    const vs=DB.versions[u.id]||[], last=vs[vs.length-1];
+    if(last&&last.title===D.title&&last.text===D.text){delete DB.drafts[u.id]}
+    else if(!last&&!D.title&&!D.text){delete DB.drafts[u.id]}
+    else DB.drafts[u.id]={title:D.title,text:D.text,at:Date.now()};
+    syncEssay(u.id);
+    if($("#saved")) $("#saved").textContent=DB.drafts[u.id]?`✓ 已自動儲存 ${fmtTime(Date.now())}`:"";
+  };
+  const onInput=()=>{clearTimeout(t1);t1=setTimeout(upd,120);clearTimeout(t2);$("#saved").textContent="儲存中…";t2=setTimeout(autosave,1200);S.flush=()=>{clearTimeout(t2);autosave()}};
+  $("#etitle").oninput=onInput; $("#etext").oninput=onInput;
+  $("#etext").addEventListener("paste",e=>{
+    const raw=e.clipboardData?.getData("text/plain"); if(raw==null) return;
+    e.preventDefault(); const {text,n}=cleanPaste(raw), ta=e.target;
+    ta.setRangeText(text,ta.selectionStart,ta.selectionEnd,"end"); onInput();
+    if(n>0) toast(`已幫你清掉 ${n} 處多餘的空白或空行`);
+  });
+  $("#esubmit").onclick=()=>submitFlow(L||layout(u,S.draft));
+  $$("[data-dlv]").forEach(b=>b.onclick=()=>downloadOne(u.id,+b.dataset.dlv));
+  requestAnimationFrame(upd);
+}
+async function submitFlow(L){
+  const u=S.user, d=S.draft, n=countChars(d.text);
+  const problems=[]; if(!d.title.trim()) problems.push("還沒填題目"); if(!n) problems.push("內文是空的"); if(n>LIMIT) problems.push(`超過字數上限 ${n-LIMIT} 字`); if(!L.fits) problems.push("內容超過兩頁");
+  if(problems.length){await dialog({title:"還不能繳交",body:`<ul>${problems.map(p=>`<li>${p}</li>`).join("")}</ul>`,buttons:[{l:"回去修改",v:1,primary:true}]});return}
+  const v=(DB.versions[u.id]?.length||0)+1, late=isLate(Date.now());
+  const ok=await dialog({title:`確認繳交第 ${v} 版？`,wide:true,
+    body:`<div class="muted">請確認下面的排版沒問題。${v>1?`交出後老師會改看第 ${v} 版，舊版本會留在紀錄裡。`:""}</div>${late?'<div class="note" style="margin:10px 0 0;background:var(--warn-soft);color:var(--warn)">已經過了截止時間，這次會被標記為「遲交」。</div>':""}
+      <div class="pages" id="cfPages" style="margin-top:14px;background:var(--soft);padding:14px;border-radius:10px"></div>`,
+    buttons:[{l:"再改一下",v:false},{l:`確定繳交第 ${v} 版`,v:true,primary:true}],
+    onMount:()=>{const box=$("#cfPages");renderPages(box,u,d,Math.min(box.clientWidth-28,620))}});
+  if(!ok) return;
+  (DB.versions[u.id]=DB.versions[u.id]||[]).push({title:d.title,text:d.text,at:Date.now()}); delete DB.drafts[u.id]; syncEssay(u.id);
+  render();
+  await downloadOne(u.id,v);
+  const e=essayVer(u.id,v), file=pdfName(u,v);
+  const r=await dialog({title:`✓ 已繳交第 ${v} 版`,
+    body:`<div class="note ok" style="margin-bottom:12px">確認信已寄到 <b>${esc(emailOf(u))}</b>，信裡附有作業 PDF。</div>
+    <details><summary class="muted" style="cursor:pointer">看信件內容（展示版不會真的寄出）</summary>
+      <div style="border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:#fff;margin-top:8px;font-size:15px">
+      <div><span class="muted">主旨：</span>【作業繳交確認】第${u.group}組 ${esc(u.name)} 個人作業 v${v}</div>
+      <div style="margin-top:6px">${esc(u.name)} 同學你好：系統已收到你的個人作業（第 ${v} 版），繳交時間 ${fmtTime(e.at)}，共 ${countChars(e.text)} 字。排版好的 PDF 附在這封信裡。需要修改的話，可以再登入系統重新繳交，老師會以最新版本為準。</div>
+      <div style="margin-top:8px;padding:6px 10px;background:var(--soft);border-radius:8px">📎 ${esc(file)}</div></div></details>`,
+    buttons:[{l:"再下載一次 PDF",v:"dl"},{l:"回首頁",v:"home",primary:true}]});
+  if(r==="dl") downloadOne(u.id,v); else go("home");
+}
+
+/* ================= 簡報 ================= */
+function sampleSlides(g){
+  const c=SLIDE_COLORS[g-1], t=TOPICS[g-1]||`第 ${g} 組期末簡報`, mem=groupMembers(g).map(s=>s.name).join("、");
+  return `<div class="slides">
+    <div class="slide" style="background:${c}"><div class="k">第 ${g} 組期末報告</div><div class="h">${t}</div><div class="k">組員：${mem}</div></div>
+    <div class="slide" style="background:${c}"><div class="k">研究動機</div><div class="h">為什麼關心這個題目？</div><ul><li>問題現況與數據</li><li>受影響的族群</li><li>現有做法的不足</li></ul></div>
+    <div class="slide" style="background:${c}"><div class="k">提案</div><div class="h">我們的解決方案</div><ul><li>具體做法與執行步驟</li><li>預期效益</li><li>可能遇到的困難</li></ul></div>
+  </div><div class="muted" style="font-size:14px;margin-top:8px">（展示用示意簡報，正式版會顯示各組上傳的 PDF）</div>`;
+}
+async function renderPdfInto(el,url){
+  el.innerHTML='<div class="muted">簡報載入中…</div>';
+  try{const lib=window.pdfjsLib;if(!lib)throw 0;lib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    const pdf=await lib.getDocument(url).promise; el.innerHTML='<div class="slides"></div>'; const box=el.firstChild;
+    for(let i=1;i<=pdf.numPages;i++){const p=await pdf.getPage(i),vp=p.getViewport({scale:1.6}),cv=document.createElement("canvas");cv.width=vp.width;cv.height=vp.height;box.appendChild(cv);await p.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise}
+  }catch(e){el.innerHTML='<div class="fit-warn">簡報無法顯示，請確認檔案是 PDF</div>'}
+}
+function slidesHTML(g){
+  const p=DB.pdfs[g];
+  if(!p) return `<div class="card empty"><b>第 ${g} 組還沒上傳簡報</b>組長上傳後，這裡就會顯示簡報。</div>`;
+  return p.kind==="sample"?sampleSlides(g):`<div data-pdf="${g}"></div>`;
+}
+const mountPdfs=()=>$$("[data-pdf]").forEach(el=>renderPdfInto(el,DB.pdfs[el.dataset.pdf].url));
+
+/* ================= 學生：幫各組評分（逐組） ================= */
+function viewPeer(){
+  const u=S.user, mine=DB.peer[u.id]||{};
+  if(!ownUploaded(u)) return `<div class="page-head"><div><h2>幫各組評分</h2></div></div>
+    <div class="card empty"><div style="font-size:44px">🔒</div><b>本組簡報還沒上傳</b>${u.leader?"你是組長，請先上傳本組簡報 PDF，上傳後全組就能開始評分。":"要等組長上傳第 "+u.group+" 組的簡報後，才能開始幫各組評分。"}
+    ${u.leader?`<div style="margin-top:16px"><button class="btn primary big" data-go="upload">去上傳簡報</button></div>`:""}</div>`;
+  const g=S.sel||ALLG.find(x=>!mine[x]&&DB.pdfs[x])||1, cur=mine[g], done=peerDone(u.id), idx=ALLG.indexOf(g);
+  return `<div class="page-head"><div><h2>幫各組評分</h2><div class="sub">看完簡報後打分數。評完按「下一組」，也可以點上面的組別跳過去。</div></div><span class="spacer"></span>
+    <div style="min-width:200px"><div class="row" style="justify-content:space-between;font-size:15px"><span>進度</span><b>${done} / 7 組</b></div><div class="bar"><i style="width:${done/7*100}%"></i></div></div></div>
+  ${done===7&&!S.sel?`<div class="note ok">✓ 七組都評完了！組長會參考全組的分數送出小組評分。</div>`:""}
+  <div class="chips">${ALLG.map(x=>`<button class="chip ${mine[x]?"done":""} ${x===g?"on":""}" data-pg="${x}">第 ${x} 組${x===u.group?"（本組）":""}<small>${mine[x]?`✓ ${mine[x].score} 分`:DB.pdfs[x]?"未評":"未上傳"}</small></button>`).join("")}</div>
+  <div class="viewer">
+    <div>${slidesHTML(g)}</div>
+    <div class="card panel" style="position:sticky;top:84px">
+      <div class="muted">第 ${g} 組${g===u.group?"（你的組別）":""}｜${idx+1} / 7</div>
+      <h2>第 ${g} 組簡報</h2>
+      ${DB.pdfs[g]?`
+      <div style="margin-top:14px;font-weight:500">你的分數（0 到 100）</div>
+      <div class="scorebox"><button class="btn" data-adj="-5">−5</button><input id="sc" type="number" inputmode="numeric" min="0" max="100" value="${cur?.score??""}" placeholder="—"><button class="btn" data-adj="5">+5</button></div>
+      <div class="err" id="scerr" style="min-height:1.2em;font-size:15px"></div>
+      <label class="field" style="margin-top:4px"><span>評語（選填）</span><textarea class="cmt" id="cmt" placeholder="給這組的建議…">${esc(cur?.comment||"")}</textarea></label>
+      <div class="row">
+        ${idx>0?`<button class="btn" id="prevG">← 上一組</button>`:""}
+        <button class="btn primary" id="saveNext" style="flex:1">${idx<6?"儲存，下一組 →":"儲存，完成評分"}</button>
+      </div>`:`<div class="muted" style="margin-top:12px">這組還沒上傳簡報，暫時不能評分。</div>${idx<6?`<button class="btn" id="skipG" style="margin-top:12px">先評下一組 →</button>`:""}`}
+    </div>
+  </div>`;
+}
+function bindPeer(){
+  const u=S.user, mine=()=>DB.peer[u.id]||{};
+  if(!ownUploaded(u)){$$("[data-go]").forEach(b=>b.onclick=()=>nav(b.dataset.go));return}
+  const g=S.sel||ALLG.find(x=>!mine()[x]&&DB.pdfs[x])||1, idx=ALLG.indexOf(g);
+  $$("[data-pg]").forEach(b=>b.onclick=()=>nav("peer",+b.dataset.pg));
+  mountPdfs();
+  const sc=$("#sc"); if(!sc){const sk=$("#skipG");if(sk)sk.onclick=()=>nav("peer",ALLG[idx+1]);return}
+  const clamp=v=>Math.max(0,Math.min(100,v));
+  $$("[data-adj]").forEach(b=>b.onclick=()=>{sc.value=clamp((sc.value===""?80:+sc.value)+ +b.dataset.adj)});
+  const save=()=>{
+    const v=sc.value===""?NaN:Math.round(+sc.value);
+    if(!(v>=0&&v<=100)){$("#scerr").textContent="請輸入 0 到 100 的分數";sc.focus();return false}
+    (DB.peer[u.id]=DB.peer[u.id]||{})[g]={score:v,comment:$("#cmt").value.trim()}; return true;
+  };
+  S.leave=()=>{const c=mine()[g];const v=sc.value, cm=$("#cmt").value.trim();
+    const dirty=c?(String(c.score)!==v||c.comment!==cm):(v!==""||cm!=="");
+    return dirty?{msg:`第 ${g} 組的分數或評語還沒儲存。`,save}:null};
+  $("#saveNext").onclick=()=>{ if(!save()) return; S.leave=null;
+    const next=idx<6?ALLG[idx+1]:null;
+    toast(`已儲存第 ${g} 組：${mine()[g].score} 分`);
+    if(next) go("peer",next); else {const left=ALLG.filter(x=>!mine()[x]&&DB.pdfs[x]);left.length?go("peer",left[0]):go("peer",null)}
+  };
+  const pv=$("#prevG"); if(pv) pv.onclick=()=>nav("peer",ALLG[idx-1]);
+  sc.onkeydown=e=>{if(e.key==="Enter")$("#saveNext").click()};
+}
+
+/* ================= 全組評分彙整（組員） ================= */
+function memberMatrix(g,{hiId=null,clickable=false}={}){
+  return `<div class="card" style="padding:0;overflow:auto"><table class="matrix">
+    <thead><tr><th>組員</th>${ALLG.map(t=>`<th class="num">第 ${t} 組${t===g?"<br><span class='muted' style='font-weight:400'>（本組）</span>":""}</th>`).join("")}</tr></thead>
+    <tbody>${groupMembers(g).map(s=>`<tr class="${s.id===hiId?"mine":""}" ${clickable?`data-pv="${s.id}" style="cursor:pointer"`:""}><td>${clickable?`<u>${esc(s.name)}</u>`:esc(s.name)}${s.leader?' <span class="pill lead">組長</span>':""}</td>${ALLG.map(t=>{const v=DB.peer[s.id]?.[t];return `<td class="num">${v?v.score+(v.comment?' <span title="有評語" style="color:var(--gold)">●</span>':""):'<span class="cell-empty">未評</span>'}</td>`}).join("")}</tr>`).join("")}
+    <tr class="avg"><td>組內平均</td>${ALLG.map(t=>`<td class="num">${avgFor(g,t)??"—"}</td>`).join("")}</tr></tbody></table></div>`;
+}
+function finalTable(f){
+  const order=[...ALLG].sort((a,b)=>f.ranks[a]-f.ranks[b]), c=f.comments||{};
+  return `<div class="card" style="padding:0;overflow:auto"><table><thead><tr><th style="white-space:nowrap">名次</th><th>組別</th><th class="num">分數</th><th>評語</th></tr></thead><tbody>
+  ${order.map(t=>`<tr><td style="white-space:nowrap"><b>第 ${f.ranks[t]} 名</b></td><td>第 ${t} 組${TOPICS[t-1]?"｜"+TOPICS[t-1]:""}</td><td class="num"><b>${f.scores[t]}</b></td><td>${c[t]?esc(c[t]):'<span class="muted">—</span>'}</td></tr>`).join("")}</tbody></table>
+  <div style="padding:14px 16px;border-top:1px solid var(--line)"><b>整體評語：</b>${f.overall?esc(f.overall):'<span class="muted">（沒有填寫）</span>'}</div></div>`;
+}
+function viewMatrix(){
+  const u=S.user, g=u.group, mem=groupMembers(g), fin=DB.finals[g], done=mem.filter(s=>peerDone(s.id)===7).length;
+  return `<div class="page-head"><div><h2>第 ${g} 組全組評分彙整</h2><div class="sub">組內已評完 ${done} / ${mem.length} 人。組長會參考這張表，替七組打分並排名後送出。</div></div></div>
+  ${memberMatrix(g,{hiId:u.id})}
+  <h3 style="margin-top:24px">組長送出的小組評分</h3>
+  ${fin?`<div class="muted" style="margin-bottom:8px">${fmtTime(fin.at)} 送出</div>${finalTable(fin)}`:`<div class="card empty"><b>組長還沒送出</b>送出後會顯示在這裡。</div>`}`;
+}
+
+/* ================= 組長：送出小組評分（拖曳排名） ================= */
+function initRank(){
+  const g=S.user.group, fin=DB.finals[g];
+  if(fin){S.rk={order:[...ALLG].sort((a,b)=>fin.ranks[a]-fin.ranks[b]),scores:{...fin.scores},comments:{...(fin.comments||{})},overall:fin.overall||""};return}
+  const scores={}; ALLG.forEach(t=>{const a=avgFor(g,t);scores[t]=a!=null?Math.round(a):""});
+  S.rk={order:[...ALLG].sort((a,b)=>(scores[b]===""?-1:scores[b])-(scores[a]===""?-1:scores[a])||a-b),scores,comments:{},overall:""};
+}
+function viewGroupSubmit(){
+  const u=S.user, g=u.group, mem=groupMembers(g), fin=DB.finals[g];
+  if(!ownUploaded(u)) return `<div class="page-head"><div><h2>送出第 ${g} 組的小組評分</h2></div></div>
+    <div class="card empty"><div style="font-size:44px">🔒</div><b>請先上傳本組簡報</b>上傳後組員才能開始評分，之後再回來送出小組評分。<div style="margin-top:16px"><button class="btn primary big" data-go="upload">去上傳簡報</button></div></div>`;
+  const notDone=mem.filter(s=>peerDone(s.id)<7);
+  if(!S.rk||S.rk.g!==g){initRank();S.rk.g=g}
+  return `<div class="page-head"><div><h2>送出第 ${g} 組的小組評分</h2><div class="sub">參考組員的分數，替七組打分、寫評語，並拖曳排出第 1 到第 7 名。</div></div></div>
+  ${notUploaded().length?`<div class="note" style="background:var(--warn-soft);color:var(--warn)">第 ${notUploaded().join("、")} 組還沒上傳簡報。可以先填分數和評語，但要等七組都上傳後才能送出。</div>`:""}
+  ${fin?`<div class="note ok">✓ 已在 ${fmtTime(fin.at)} 送出，修改後可以重新送出。</div>`:notDone.length?`<div class="note">還有 ${notDone.length} 位組員沒評完：${notDone.map(s=>esc(s.name)).join("、")}。建議等全員評完再送出，但你也可以先送。</div>`:`<div class="note info">全組都評完了，可以送出。</div>`}
+  <details ${fin?"":"open"} style="margin-bottom:22px"><summary style="cursor:pointer;font-weight:700;font-size:18px;min-height:40px">① 組員的個人評分</summary>${memberMatrix(g,{hiId:u.id})}</details>
+  <div class="row" style="margin-bottom:10px"><h3 style="margin:0;font-size:18px">② 打分數並排名</h3><span class="spacer"></span><button class="btn small" id="autoRank">依分數高低重新排序</button></div>
+  <div class="muted" style="font-size:15px;margin-bottom:10px">按住左邊的 ⠿ 上下拖曳，或用 ↑ ↓ 調整順序。分數預設是組內平均，每組都可以寫評語，點「組員評語」可以參考組員寫了什麼。</div>
+  <div class="rank-list" id="rankList"></div>
+  <div id="rankMsg" style="margin-top:12px;min-height:1.6em"></div>
+  <h3 style="margin-top:22px;font-size:18px">③ 整體評語（選填）</h3>
+  <div class="muted" style="font-size:15px;margin-bottom:8px">對這次所有組別的整體觀察，或你們組評分的考量。</div>
+  <textarea class="cmt" id="overall" style="min-height:110px" placeholder="例如：各組水準接近，我們主要看論點是否有資料支撐…">${esc(S.rk.overall)}</textarea>
+  <div class="row" style="margin-top:8px"><span class="spacer"></span><button class="btn primary big" id="submitFinal">${fin?"重新送出小組評分":"送出小組評分"}</button></div>`;
+}
+function renderRank(){
+  const {order,scores}=S.rk;
+  const conflict=new Set(); order.forEach((a,i)=>order.slice(i+1).forEach(b=>{if(scores[a]!==""&&scores[b]!==""&&+scores[b]>+scores[a]){conflict.add(a);conflict.add(b)}}));
+  $("#rankList").innerHTML=order.map((t,i)=>`<div class="rank-item ${conflict.has(t)?"conflict":""}" data-ri="${t}">
+    <div class="handle" title="拖曳">⠿</div><div class="rk">第 ${i+1} 名</div>
+    <div><b>第 ${t} 組</b>${t===S.user.group?' <span class="muted">（本組）</span>':""}<div class="muted" style="font-size:14px">組內平均 ${avgFor(S.user.group,t)??"—"}${DB.pdfs[t]?"":' <span class="pill no">未上傳簡報</span>'}</div></div>
+    <div class="sc row" style="gap:6px"><input type="number" inputmode="numeric" min="0" max="100" data-rs="${t}" value="${scores[t]}" placeholder="分數"><span class="muted">分</span></div>
+    <div class="arrows"><button class="btn" data-mv-up="${t}" ${i===0?"disabled":""} aria-label="往上">↑</button><button class="btn" data-mv-dn="${t}" ${i===6?"disabled":""} aria-label="往下">↓</button></div>
+    <div class="rc"><span class="lbl muted" style="padding-top:8px;text-align:right">評語</span><textarea data-rcm="${t}" rows="1" placeholder="給第 ${t} 組的評語（選填）">${esc(S.rk.comments[t]||"")}</textarea></div>
+    ${(()=>{const mc=groupMembers(S.user.group).map(m=>({n:m.name,c:DB.peer[m.id]?.[t]?.comment})).filter(x=>x.c);return mc.length?`<details class="mc"><summary>組員評語（${mc.length}）</summary>${mc.map(x=>`<div>・${esc(x.n)}：${esc(x.c)}</div>`).join("")}</details>`:""})()}
+    </div>`).join("");
+  const missing=ALLG.filter(t=>scores[t]===""||+scores[t]<0||+scores[t]>100);
+  $("#rankMsg").innerHTML=missing.length?`<span style="color:var(--warn);font-weight:500">還有 ${missing.length} 組沒填分數（0 到 100）</span>`:conflict.size?`<span style="color:#8a6420;font-weight:500">黃色的組別：分數高的排在分數低的後面。如果是刻意的，仍然可以送出。</span>`:`<span style="color:var(--ok);font-weight:500">✓ 分數和名次都沒問題</span>`;
+  bindRank();
+}
+function moveRank(t,delta){const o=S.rk.order,i=o.indexOf(t),j=i+delta;if(j<0||j>6)return;[o[i],o[j]]=[o[j],o[i]];renderRank();$(`[data-ri="${t}"] input`)?.focus()}
+function bindRank(){
+  $$("[data-rcm]").forEach(i=>i.oninput=()=>{S.rk.comments[i.dataset.rcm]=i.value});
+  $$(".rank-item .handle").forEach(h=>{const it=h.closest(".rank-item");h.onmousedown=h.ontouchstart=()=>{it.draggable=true}});
+  $$("[data-rs]").forEach(i=>{i.oninput=()=>{S.rk.scores[i.dataset.rs]=i.value===""?"":Math.round(+i.value)};i.onchange=()=>renderRank()});
+  $$("[data-mv-up]").forEach(b=>b.onclick=()=>moveRank(+b.dataset.mvUp,-1));
+  $$("[data-mv-dn]").forEach(b=>b.onclick=()=>moveRank(+b.dataset.mvDn,1));
+  let drag=null;
+  $$(".rank-item").forEach(el=>{
+    el.ondragstart=e=>{drag=+el.dataset.ri;el.classList.add("dragging");e.dataTransfer.effectAllowed="move"};
+    el.ondragend=()=>{el.draggable=false;el.classList.remove("dragging");$$(".rank-item").forEach(x=>x.classList.remove("over"))};
+    el.ondragover=e=>{e.preventDefault();el.classList.add("over")};
+    el.ondragleave=()=>el.classList.remove("over");
+    el.ondrop=e=>{e.preventDefault();const to=+el.dataset.ri;if(drag==null||drag===to)return;const o=S.rk.order,ti=o.indexOf(to);o.splice(o.indexOf(drag),1);o.splice(ti,0,drag);renderRank()};
+  });
+}
+function bindGroupSubmit(){
+  if(!ownUploaded(S.user)){$$("[data-go]").forEach(b=>b.onclick=()=>nav(b.dataset.go));return}
+  renderRank();
+  $("#overall").oninput=e=>{S.rk.overall=e.target.value};
+  $("#autoRank").onclick=()=>{const s=S.rk.scores;if(ALLG.some(t=>s[t]==="")){toast("請先把七組的分數都填好");return}
+    S.rk.order.sort((a,b)=>s[b]-s[a]);renderRank();toast("已依分數排好，同分的請自己調整先後")};
+  $("#submitFinal").onclick=async()=>{
+    if(notUploaded().length){await dialog({title:"還不能送出",body:`第 ${notUploaded().join("、")} 組還沒上傳簡報，要等七組都上傳後才能送出小組評分。你填的分數和評語會先保留在這個畫面。`,buttons:[{l:"知道了",v:1,primary:true}]});return}
+    const {order,scores}=S.rk; const comments={}; ALLG.forEach(t=>{const c=(S.rk.comments[t]||"").trim();if(c)comments[t]=c}); const overall=(S.rk.overall||"").trim(); if(ALLG.some(t=>scores[t]===""||+scores[t]<0||+scores[t]>100)){toast("還有組別沒填分數");return}
+    const ranks={}; order.forEach((t,i)=>ranks[t]=i+1);
+    const ok=await dialog({title:"確認送出小組評分？",wide:true,body:finalTable({scores,ranks,comments,overall}),buttons:[{l:"再看一下",v:false},{l:"確定送出",v:true,primary:true}]});
+    if(!ok) return;
+    DB.finals[S.user.group]={scores:{...scores},ranks,comments,overall,at:Date.now()}; toast("小組評分已送出"); go("home");
+  };
+}
+
+/* ================= 組長：組員繳交狀況 ================= */
+function reminderText(){
+  const u=S.user, mem=groupMembers(u.group), miss=mem.filter(s=>essayStatus(s.id)!=="submitted"), np=mem.filter(s=>peerDone(s.id)<7);
+  let t=`【第 ${u.group} 組提醒】\n截止時間：${fmtTime(DB.settings.deadline)}\n`;
+  if(miss.length) t+=`\n還沒交個人作業：${miss.map(s=>"@"+s.name).join(" ")}`;
+  if(np.length&&PEER()) t+=`\n還沒評完各組：${np.map(s=>"@"+s.name+`（${peerDone(s.id)}/7）`).join(" ")}`;
+  if(!miss.length&&(!np.length||!PEER())) t+="\n大家都完成了，辛苦了！";
+  return t+`\n\n繳交網址：https://（正式版的網址）`;
+}
+function viewMembers(){
+  const g=S.user.group, mem=groupMembers(g), done=mem.filter(s=>essayStatus(s.id)==="submitted").length;
+  return `<div class="page-head"><div><h2>第 ${g} 組組員狀況</h2><div class="sub">個人作業已交 ${done} / ${mem.length} 人</div></div><span class="spacer"></span>${countdown()}</div>
+  <div class="card" style="padding:0;overflow:auto;margin-bottom:20px"><table>
+    <thead><tr><th>姓名</th><th>個人作業</th><th>最後繳交</th>${PEER()?"<th>幫各組評分</th>":""}</tr></thead>
+    <tbody>${mem.map(s=>{const e=DB.essays[s.id],p=peerDone(s.id);return `<tr><td>${esc(s.name)}${s.leader?' <span class="pill lead">組長</span>':""}</td><td>${statusPill(s.id)}</td><td class="muted">${e?.v?fmtTime(e.at):"—"}</td>${PEER()?`<td>${p===7?'<span class="pill ok">已評完</span>':`<span class="pill ${p?"draft":"no"}">${p} / 7</span>`}</td>`:""}</tr>`}).join("")}</tbody></table></div>
+  <div class="card"><div class="row"><h3 style="margin:0">傳到 LINE 群組的提醒</h3><span class="spacer"></span><button class="btn primary" id="cpLine">📋 複製提醒訊息</button></div>
+  <div class="msgbox" id="lineMsg" style="margin-top:12px">${esc(reminderText())}</div></div>`;
+}
+function bindMembers(){
+  $("#cpLine").onclick=async()=>{try{await navigator.clipboard.writeText(reminderText());toast("已複製，到 LINE 群組貼上就可以")}catch(e){const r=document.createRange();r.selectNodeContents($("#lineMsg"));const s=getSelection();s.removeAllRanges();s.addRange(r);toast("已幫你選好文字，請按複製")}};
+}
+
+
+/* ================= 作業說明 ================= */
+const BRIEF_DEFAULT={
+  eyebrow:"ASTM 課間作業",
+  title:"第一次與第二次領袖營之間的作業",
+  lead:"兩份作業，同一天截止。下面是你要交的東西，詳細說明往下看。",
+  nextEvent:"第二次領袖營｜課堂上小組成員互評",
+  letter:"很高興你們認真完成了第一次小組作業，也完成了第一次 ASTM 領袖營，很高興我們有緣一起交流學習。\n學習的目的是改變 ABC：\n[ABC]\n希望大家通過這門課的認真交流學習能真正提昇你的管理和領導功力。很期待下個又能跟大家一起進行第二次領袖營，共同完成值得回憶的 ASTM 學習旅程。\n為了有效利用我們難得在一起的課堂時間，我特別安排兩次領袖營之間有**四星期的課間時段**，作為小組繼續學習及團隊建設的發展期，希望到第二次領袖營時，大家已有更多體會和精進，能在更高的基礎上深化學習效益。",
+  ind:{content:"第一次領袖營學習反思心得",length:"不超過 1500 字",text:"請用不超過 1500 字（兩頁 word 檔）總結第一次領袖營學習反思心得，於 {截止} 前上傳至助教指定學習平台。",hint:"✍️ 在本系統的「我的作業」直接打字即可，系統會自動排版成兩頁 A4，**不需要另外交 Word 檔**。"},
+  grp:{text:"因為大家都很忙，也在不同城市工作或出差，所以**如何跨越時空交流互動並完成作業，這本身就是一項重要學習**。如何通過作業繼續建構團隊，並修煉各自的領導與管理能力，這是很重要的實踐學習。",note:"ppt 簡報格式，上傳本系統前請另存成 PDF"},
+  cases:[
+    {tag:"(1) 主體",part:"主體",short:"Netflix 及華為",sub:"案例學習-1",pages:12,pageNote:"最多 12 頁",title:"案例學習-1：Netflix 及華為",
+     desc:"請各自先行閱讀 Netflix 及華為案例後，進行小組討論並提交一份小組報告（ppt 簡報格式，最多不超過 12 頁）。除了所提供的案例資料及下列補充資料，歡迎上網搜索這三家案例公司的許多公開資料。",
+     refs:"## 想多瞭解 Netflix\n零規則－高人才密度 × 完全透明 × 最低管控 | 天下雜誌出版社 | https://www.books.com.tw/products/0010873975?loc=P_br_r0vq68ygz_D_2aabd0_B_2\nNetflix 文化：自由與責任 | Weblink | https://docs.huihoo.com/netflix/Netflix%E6%96%87%E5%8C%96-%E8%87%AA%E7%94%B1%E4%B8%8E%E8%B4%A3%E4%BB%BB%E4%B8%AD%E8%8B%B1%E6%96%87%E5%8F%8C%E8%AF%AD%E5%AF%B9%E7%85%A7%E7%89%88.pdf\n## 想多瞭解華為\n「華為模式」管理法：愈是核心幹部，愈是「折騰」得厲害 | 遠見雜誌 | https://www.gvm.com.tw/article/73540\n任正非：用幹部隊伍激活的確定性，應對環境與商業變化的不確定性（講話全文） | IT之家 | https://www.ithome.com/0/548/225.htm",
+     hint:"以下討論問題有助於討論方向，但不必以此為限。目的是以**「領導及人才管理」**為主題，整理出從這些案例得到的體會和感悟。網上有很多這些案例公司的資訊，可以自己搜尋補充。",
+     qs:"1.1 這兩家公司的人才管理跟傳統的人才管理有何不同？三家公司又有何異同？有那些令你驚豔且特別值得學習的 Best Practices？為什麼他們不只能「看到」且能「做到」大家都沒想到，或只想而做不到的？\n1.2 Netflix 為什麼不給績效獎金？為什麼不怕影響員工的績效及投入度？\n1.3 90 年代的華為基本法對華為的成長產生什麼作用？華為大學跟一般企業大學有何不同？\n1.4 這兩個案例跟課堂上策略人才管理及四大心法的學習如何連接？\n1.6 其中大陸案例對台灣企業經營者有何特別意義和啟發？\n1.7 其中兩個案例，華為和 Netflix 的經營狀況和業績，都出過很大的問題，案例還值得學習嗎？為什麼？\n1.8 總結出五大學習亮點"},
+    {tag:"(2) 附錄 1",part:"附錄 1",short:"Rob Parson",sub:"案例學習-2",pages:2,pageNote:"2 頁",title:"案例學習-2：Rob Parson 的績效挑戰",
+     desc:"請各自閱讀案例後進行小組討論，並提交一份小組報告（2 頁 ppt 簡報格式），列為小組報告的附錄 1。",refs:"",hint:"",
+     qs:"2.1 評議 Rob 的績效及是否應該升遷？為什麼？升或不升遷可能會產生甚麼問題？\n2.2 請用 4W：What's So? Why So? So What? 及 Now What（SSC 破、立、傳）分析案情及 Narsh 應該考慮的行動方案，並用四大心法來分析及解決個案的核心危機。"},
+    {tag:"(3) 附錄 2",part:"附錄 2",short:"行動學習",sub:"團隊互動反思",pages:2,pageNote:"2 頁",title:"行動學習",
+     desc:"學習小組的目的不只是完成作業任務，更重要的是**創造一個行為實驗室**，讓學員實踐、檢驗、練習、強化課堂上的學習。各位要努力練習如何將學習小組建構成為高績效團隊，每一位同學都應努力發揮其作用，並檢驗彼此接受及給予影響的情況。\n這是你們的小組第二次一起完成案例學習的任務，請針對團隊的互動依下列項目反思，並提交一份小組報告（2 頁 ppt 簡報格式），列為小組報告的附錄 2。",refs:"",hint:"",
+     qs:"3.1 小組完成任務的團隊效益（1 到 5 分，5 分是完美）\n3.2 小組的團隊合作效益（1 到 5 分，5 分是完美）\n3.3 小組的團隊學習效益（1 到 5 分，5 分是完美）\n3.4 跟第一次的小組學習比較有何不同？為什麼？\n3.5 有那些學到的觀念／原則／方法可用於提高小組協作效益？\n3.6 你們會採取哪些不同的作法讓小組協作更有效益？\n3.7 從小組互動及各自的管理經驗中，大家對團隊建設及組織文化建設的認知有何想法？有何共識？面對的是那些挑戰？\n3.8 你們如何定義小組的初衷及對組員 ABC 的標準、小組成員的行為是否需要調整？為什麼？（提醒：記得這些共識是為了在第二次領袖營時，能通過有效地做好小組成員互評，完成小組成為高績效團隊的挑戰：小組展現最佳效能並幫助每位組員成為更好領導者。）"}
+  ],
+  closing:"好好珍惜並享受你們的共同學習之旅！\n我愛大家！期待再續前緣！"
+};
+let BRIEF=JSON.parse(JSON.stringify(BRIEF_DEFAULT));
+const maxPages=()=>BRIEF.cases.reduce((a,c)=>a+(+c.pages||0),0);
+const pagesText=()=>BRIEF.cases.map(c=>`${c.part} ${c.pages}`).join("＋")+" 頁";
+const md=t=>esc(t||"").replace(/\*\*(.+?)\*\*/g,"<mark>$1</mark>").replace(/\{截止\}/g,fmtTime(DB.settings.deadline));
+const ABC_HTML='<div class="abc"><div><b>A</b>Attitude<br><span>心態</span></div><div><b>B</b>Behavior<br><span>行為</span></div><div><b>C</b>Capability<br><span>能力</span></div></div>';
+const paras=t=>(t||"").split("\n").map(x=>x.trim()).filter(Boolean).map(x=>x==="[ABC]"?ABC_HTML:`<p>${md(x)}</p>`).join("");
+// 把長問題依「？」拆成多行；「（提醒：…）」拆成提示框；「（1 到 5 分…）」顯示成量表
+function qItem(n,t){
+  let note=""; const m=t.match(/（提醒：([\s\S]*)）$/); if(m){note=m[1];t=t.slice(0,m.index)}
+  let sc=""; const sm=t.match(/（1 ?到 ?5 ?分[^）]*）/); if(sm){t=t.replace(sm[0],"");sc=`<span class="scale" title="${esc(sm[0])}">${[1,2,3,4,5].map(x=>`<i>${x}</i>`).join("")}</span><span class="muted" style="font-size:14px;margin-left:6px">5 分是完美</span>`}
+  const parts=[]; t.split(/(?<=？)/).map(x=>x.trim()).filter(Boolean).forEach(x=>{if(parts.length&&(x.length<=8||parts[parts.length-1].length<=8))parts[parts.length-1]+=x;else parts.push(x)});
+  return `<li><span class="n">${esc(n)}</span><div class="tx">${parts.map(x=>`<div>${md(x)}</div>`).join("")}${sc}${note?`<div class="note2">💡 提醒：${md(note)}</div>`:""}</div></li>`;
+}
+const parseQs=t=>(t||"").split("\n").map(x=>x.trim()).filter(Boolean).map(x=>{const m=x.match(/^(\d+(?:\.\d+)*)\s+([\s\S]+)$/);return m?[m[1],m[2]]:["・",x]});
+const qList=t=>{const q=parseQs(t);return q.length?`<ol class="qs">${q.map(([n,x])=>qItem(n,x)).join("")}</ol>`:""};
+function refsHTML(t){
+  let html="", k=0;
+  (t||"").split("\n").map(x=>x.trim()).filter(Boolean).forEach(line=>{
+    if(line.startsWith("##")){html+=`<div class="rt">${esc(line.replace(/^#+\s*/,""))}</div>`;k=0;return}
+    const parts=line.split("|").map(x=>x.trim()), url=parts[parts.length-1], title=parts[0], src=parts.length>2?parts[1]:"";
+    k++; let host=""; try{host=new URL(url).hostname.replace(/^www\./,"")}catch(e){html+=`<div class="refs-bad">${esc(line)}</div>`;return}
+    html+=`<a href="${esc(url)}" target="_blank" rel="noopener"><span>📎</span><span>${esc(title)}${src?`<span class="muted">（${esc(src)}）</span>`:""}<small>補充資料-${k}｜${esc(host)}</small></span><span class="ar">↗</span></a>`;
+  });
+  return html?`<div class="refs">${html}</div>`:"";
+}
+function viewBrief(){
+  const B=BRIEF, u=S.user, dl=fmtTime(DB.settings.deadline), stu=u&&!u.teacher, lead=stu&&u.leader;
+  const left=DB.settings.deadline-Date.now(), days=Math.max(0,Math.ceil(left/864e5)), mp=maxPages()||1;
+  let esSt="", grSt="";
+  if(!u){esSt='<span class="pill grey">登入後顯示你的繳交狀態</span>';grSt='<span class="pill grey">登入後顯示本組上傳狀態</span>'}
+  else if(stu){
+    const e=DB.essays[u.id];
+    esSt=essayStatus(u.id)==="submitted"?`<span class="pill ok">✓ 已交 v${e.v}</span>`:essayStatus(u.id)==="draft"?'<span class="pill draft">寫了還沒交</span>':'<span class="pill no">還沒交</span>';
+    const p=DB.pdfs[u.group]; grSt=p?`<span class="pill ok">✓ 已上傳${p.pages?`，${p.pages} 頁`:""}</span>`:'<span class="pill no">組長還沒上傳</span>';
+  }else{
+    const n=DB.students.filter(x=>essayStatus(x.id)==="submitted").length;
+    esSt=`<span class="pill grey">已交 ${n} / ${DB.students.length} 人</span>`; grSt=`<span class="pill grey">已上傳 ${Object.keys(DB.pdfs).length} / 7 組</span>`;
+  }
+  const [nb,na]=(B.nextEvent||"").split("｜");
+  const toc=[["b-top","總覽"],["b-letter","老師的話"],["b-ind","個人反思心得"],["b-grp","小組報告"],...B.cases.map((c,i)=>[`b-c${i+1}`,`${c.tag.replace(/\s*(主體|附錄.*)$/,"")} ${c.short}`,1])];
+  return `<div class="bw">
+  <nav class="toc" id="toc"><div class="tt">目錄</div>${toc.map(([id,t,sub])=>`<a href="#${id}" data-jump="${id}" class="${sub?"sub":""}">${esc(t)}</a>`).join("")}</nav>
+  <article class="brief">
+  ${u&&u.teacher?`<div class="note info row" style="justify-content:space-between">這是學員看到的作業說明。<button class="btn small" data-go="t-settings">編輯作業說明</button></div>`:""}
+  <section id="b-top">
+    <div class="eyebrow">${esc(B.eyebrow)}</div>
+    <h1>${esc(B.title)}</h1>
+    <p class="lead">${md(B.lead)}</p>
+    <div class="tl">
+      <div class="st now"><i></i><b>今天</b>${fmtTime(Date.now()).split(" ")[0]}</div>
+      <div class="st due"><i></i><b>作業截止</b>${dl}<br>還有 ${days} 天</div>
+      ${nb?`<div class="st"><i></i><b>${esc(nb)}</b>${esc(na||"")}</div>`:""}
+    </div>
+    <div class="check">
+      <div class="it"><div class="ic">✍️</div><div><div class="nm">個人反思心得</div><div class="ds">每個人都要交｜${esc(B.ind.length)}（兩頁）</div><div style="margin-top:4px">${esSt}</div></div>${stu||!u?`<button class="btn primary" data-go="essay">去寫心得</button>`:""}</div>
+      <div class="it g"><div class="ic">📊</div><div><div class="nm">小組報告</div><div class="ds">組長上傳一份 PDF｜${esc(pagesText())}</div><div style="margin-top:4px">${grSt}</div></div>${lead?`<button class="btn primary" data-go="upload">去上傳</button>`:!u?`<button class="btn" data-go="upload">組長上傳</button>`:""}</div>
+    </div>
+  </section>
+
+  <section id="b-letter"><h2>老師的話</h2><div class="letter">${paras(B.letter)}</div></section>
+
+  <section id="b-ind">
+    <h2><span class="tag">個人</span>個人反思心得</h2>
+    <div class="specs"><div><span>內容</span><b>${esc(B.ind.content)}</b></div><div><span>長度</span><b>${esc(B.ind.length)}</b></div><div><span>截止</span><b>${dl}</b></div></div>
+    ${paras(B.ind.text)}
+    ${B.ind.hint?`<div class="hint">${md(B.ind.hint)}</div>`:""}
+  </section>
+
+  <section id="b-grp">
+    <h2><span class="tag g">小組</span>小組報告</h2>
+    ${paras(B.grp.text)}
+    <h3 style="margin-top:22px">${B.cases.length} 個部分，合成一份 PDF，由組長上傳</h3>
+    <div class="struct" style="grid-template-columns:${B.cases.map(c=>Math.max(1,+c.pages||1)>4?"2fr":"1fr").join(" ")}">
+      ${B.cases.map((c,i)=>`<a href="#b-c${i+1}" data-jump="b-c${i+1}" class="${i===0?"main":""}"><div class="k">${esc(c.part)}</div><div class="t">${esc(c.short)}</div><div class="p">${esc(c.sub)}｜${esc(c.pageNote)}</div><div class="bar"><i style="width:${Math.round((+c.pages||0)/Math.max(...B.cases.map(x=>+x.pages||0),1)*100)}%"></i></div></a>`).join("")}
+    </div>
+    <div class="muted" style="font-size:16px">全部最多 ${maxPages()} 頁｜${esc(B.grp.note)}｜截止 ${dl}</div>
+    ${B.cases.map((c,i)=>`<div class="case" id="b-c${i+1}" style="scroll-margin-top:96px">
+      <span class="no">${esc(c.tag)}</span><h3>${esc(c.title)}</h3>
+      ${paras(c.desc)}${refsHTML(c.refs)}${c.hint?`<div class="hint">${md(c.hint)}</div>`:""}${qList(c.qs)}
+    </div>`).join("")}
+  </section>
+
+  <div class="closing">${(B.closing||"").split("\n").map(md).join("<br>")}</div>
+  </article></div>
+  <button class="btn primary totop" id="totop" aria-label="回到頂端" hidden>↑</button>`;
+}
+function bindBrief(){
+  $$("[data-go]").forEach(b=>b.onclick=()=>{if(b.dataset.go==="t-settings")go("t-settings");else nav(b.dataset.go)});
+  $$("[data-jump]").forEach(a=>a.onclick=e=>{e.preventDefault();document.getElementById(a.dataset.jump)?.scrollIntoView({behavior:"smooth",block:"start"})});
+  const ids=["b-top","b-letter","b-ind","b-grp",...BRIEF.cases.map((c,i)=>`b-c${i+1}`)], tb=$("#totop");
+  let last=null;
+  const spy=()=>{
+    if(!$("#toc")){window.removeEventListener("scroll",spy);return}
+    let cur=ids[0]; for(const id of ids){const el=document.getElementById(id);if(el&&el.getBoundingClientRect().top<140)cur=id}
+    if(cur!==last){last=cur;$$("#toc a").forEach(a=>{const on=a.dataset.jump===cur;a.classList.toggle("on",on);if(on&&innerWidth<=960){const t=$("#toc");t.scrollTo({left:a.offsetLeft-t.clientWidth/2+a.clientWidth/2,behavior:"smooth"})}})}
+    tb.hidden=scrollY<600;
+  };
+  window.addEventListener("scroll",spy,{passive:true}); spy();
+  tb.onclick=()=>window.scrollTo({top:0,behavior:"smooth"});
+}
+
+/* ================= 組長：上傳簡報 ================= */
+function viewUpload(){
+  const g=S.user.group, p=DB.pdfs[g];
+  return `<div class="page-head"><div><h2>上傳第 ${g} 組小組報告</h2><div class="sub">只接受 PDF（ppt 請先另存成 PDF）。重新上傳會取代舊檔，全班會看到最新版本。</div></div><span class="spacer"></span>${countdown()}</div>
+  <div class="card" style="margin-bottom:16px"><b>上傳前請確認這份 PDF 包含 ${BRIEF.cases.length} 個部分</b>（<a href="#" data-go="brief">看作業說明</a>）
+    <div class="row" style="margin-top:10px;gap:10px">${BRIEF.cases.map(c=>`<span class="pill lead" style="font-size:16px;padding:6px 14px">${esc(c.part)}：${esc(c.short)}，${esc(c.pageNote)}</span>`).join("")}</div>
+    <div class="muted" style="font-size:15px;margin-top:8px">全部加起來最多 ${maxPages()} 頁，系統會自動計算頁數。</div></div>
+  ${p||!PEER()?"":`<div class="note info">上傳後，你和組員就能開始幫各組評分；其他組也才能評你們這組。</div>`}
+  ${p?`<div class="note ok">✓ 目前檔案：<b>${esc(p.name)}</b>（${fmtTime(p.at)} 上傳，原始檔名：${esc(p.orig||"")}${p.pages?`，共 ${p.pages} 頁`:""}）</div>${p.pages>maxPages()?`<div class="note" style="background:var(--warn-soft);color:var(--warn)">這份 PDF 有 ${p.pages} 頁，超過規定的 ${maxPages()} 頁（${esc(pagesText())}）。請確認內容，或刪減後重新上傳。</div>`:""}`:""}
+  <label class="upload" id="drop"><input type="file" id="pdfIn" accept="application/pdf" hidden>
+    <div style="font-size:22px;font-weight:700">📄 點這裡選擇 PDF，或把檔案拖進來</div>
+    <div class="muted">不管原本叫什麼名字，都會自動改名為「第${g}組_簡報.pdf」</div></label>
+  <h3 style="margin-top:24px">目前簡報預覽</h3><div style="max-width:760px">${slidesHTML(g)}</div>`;
+}
+function bindUpload(){
+  $$("[data-go]").forEach(b=>b.onclick=e=>{e.preventDefault();nav(b.dataset.go)});
+  const take=async f=>{if(!f)return;if(f.type!=="application/pdf"&&!/\.pdf$/i.test(f.name)){toast("只能上傳 PDF 檔");return}
+    if(f.size>20*1024*1024){toast("檔案超過 20 MB，請先壓縮");return}
+    const old=DB.pdfs[S.user.group];if(old?.url)URL.revokeObjectURL(old.url);
+    const first=!old, url=URL.createObjectURL(f);
+    busy("正在檢查 PDF…");
+    let pages=null; try{const lib=window.pdfjsLib;if(lib){lib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";pages=(await lib.getDocument(url).promise).numPages}}catch(e){}
+    busy();
+    DB.pdfs[S.user.group]={kind:"pdf",name:`第${S.user.group}組_簡報.pdf`,orig:f.name,blob:f,url,pages,at:Date.now()};
+    toast(pages>maxPages()?`已上傳，但有 ${pages} 頁，超過 ${maxPages()} 頁上限`:first&&PEER()?"簡報已上傳，全組現在可以開始評分了":first?"小組報告已上傳":"小組報告已更新");render()};
+  $("#pdfIn").onchange=e=>take(e.target.files[0]);
+  const d=$("#drop");d.ondragover=e=>{e.preventDefault();d.classList.add("drag")};d.ondragleave=()=>d.classList.remove("drag");d.ondrop=e=>{e.preventDefault();d.classList.remove("drag");take(e.dataTransfer.files[0])};
+  mountPdfs();
+}
+
+/* ================= 老師：首頁 ================= */
+const ungraded=()=>DB.students.filter(s=>essayStatus(s.id)==="submitted"&&!DB.tEssay[s.id]);
+function viewTHome(){
+  const all=DB.students, miss=all.filter(s=>essayStatus(s.id)!=="submitted"), ug=ungraded();
+  const noPdf=ALLG.filter(g=>!DB.pdfs[g]), noFin=ALLG.filter(g=>!DB.finals[g]), ugG=ALLG.filter(g=>!DB.tGroup[g]);
+  const dl=new Date(DB.settings.deadline), dlv=`${dl.getFullYear()}-${pad(dl.getMonth()+1)}-${pad(dl.getDate())}T${pad(dl.getHours())}:${pad(dl.getMinutes())}`;
+  return `<div class="page-head"><div><h2>老師您好</h2><div class="sub">下面是目前需要留意的事。點按鈕就會直接帶您過去。</div></div><span class="spacer"></span>${countdown()}</div>
+  <div class="dash">
+    <div class="card"><div class="muted">待批改的個人作業</div><div class="n">${ug.length} <small>份</small></div>
+      <div class="muted" style="margin:6px 0 12px">已繳交 ${all.length-miss.length} 份，已批改 ${all.length-miss.length-ug.length} 份</div>
+      <button class="btn primary" data-th="grade">${ug.length?"開始批改":"查看作業"}</button></div>
+    <div class="card"><div class="muted">還沒交個人作業</div><div class="n">${miss.length} <small>人</small></div>
+      <div class="namechips">${miss.map(s=>`<span>第${s.group}組 ${esc(s.name)}</span>`).join("")||'<span style="background:var(--ok-soft);color:var(--ok)">全部都交了</span>'}</div></div>
+    <div class="card"><div class="muted">小組簡報</div><div class="n">${7-noPdf.length} <small>/ 7 組已上傳</small></div>
+      <div class="muted" style="margin:6px 0 12px">${ugG.length?`還有 ${ugG.length} 組簡報老師尚未評分`:"七組都評分了"}</div>
+      <button class="btn" data-th="t-groups">看簡報與評分</button></div>
+    ${PEER()?`<div class="card"><div class="muted">小組互評</div><div class="n">${7-noFin.length} <small>/ 7 組已送出</small></div>
+      <div class="namechips">${noFin.map(g=>`<span>第 ${g} 組未送出</span>`).join("")}</div>
+      <button class="btn" data-th="t-peer">看互評結果</button></div>`:""}
+  </div>
+  <div class="card" style="margin-top:16px"><h3>下載</h3>${downloadMenu()}</div>
+  ${!CONFIG.demo?"":`<div class="card" style="margin-top:16px;border-style:dashed"><h3>測試工具（展示模式才有）</h3><div class="muted" style="font-size:15px;margin-bottom:10px">目前是空白資料。按「填入示範資料」會用示範文字幫部分學員填作業、評分，方便看老師端畫面；第 6 組會保持未上傳簡報。</div>
+    <div class="row"><button class="btn" id="seedDemo">填入示範資料</button><button class="btn" id="clearDemo">清空所有資料</button></div></div>`}
+  <div class="card" style="margin-top:16px"><div class="row"><div><h3 style="margin:0">系統設定</h3><div class="muted" style="font-size:15px">截止時間：${fmtDue(DB.settings.deadline)}｜組間互評：${PEER()?"開啟":"關閉"}</div></div><span class="spacer"></span><button class="btn" data-th="t-settings">修改截止時間、互評開關、作業說明</button></div></div>
+  <h3 style="margin-top:28px">各組狀況</h3>
+  <div class="grid7">${ALLG.map(g=>`<div class="card"><div class="row"><h3 style="margin:0">第 ${g} 組</h3><span class="muted">${TOPICS[g-1]}</span></div>
+    <div class="row" style="margin:8px 0;gap:8px">簡報 ${DB.pdfs[g]?'<span class="pill ok">已上傳</span>':'<span class="pill no">未上傳</span>'} ${PEER()?`小組互評 ${DB.finals[g]?'<span class="pill ok">已送出</span>':'<span class="pill no">未送出</span>'}`:""}</div>
+    <table style="font-size:16px">${groupMembers(g).map(s=>`<tr><td style="padding:6px 4px">${esc(s.name)}${s.leader?' <span class="pill lead">組長</span>':""}</td><td style="padding:6px 4px;text-align:right">${statusPill(s.id)}</td></tr>`).join("")}</table></div>`).join("")}</div>`;
+}
+function bindTHome(){
+  $$("[data-th]").forEach(b=>b.onclick=()=>{if(b.dataset.th==="grade"){const f=ungraded()[0];S.tFilter=f?"todo":"all";go("t-grade",f?.id||null)}else go(b.dataset.th)});
+  bindDownloadMenu();
+  if($("#seedDemo")) $("#seedDemo").onclick=()=>{loadSampleData();toast("已填入示範資料");render()};
+  if($("#clearDemo")) $("#clearDemo").onclick=async()=>{if(await dialog({title:"清空所有資料？",body:"作業、評分、簡報都會清掉，名單保留。",buttons:[{l:"取消",v:false},{l:"清空",v:true,primary:true}]})){clearAllData();toast("已清空");render()}};
+}
+
+
+/* ================= 老師：系統設定 ================= */
+const fld=(id,label,val,{area=false,rows=3,hint="",type="text"}={})=>`<label class="field" style="margin:12px 0"><span>${label}</span>${area?`<textarea class="input" id="${id}" rows="${rows}" style="font-size:16px;line-height:1.7">${esc(val)}</textarea>`:`<input class="input" type="${type}" id="${id}" value="${esc(val)}" style="font-size:16px">`}${hint?`<div class="muted" style="font-size:14px;margin-top:4px">${hint}</div>`:""}</label>`;
+function viewTSettings(){
+  const B=BRIEF, dl=new Date(DB.settings.deadline), dlv=`${dl.getFullYear()}-${pad(dl.getMonth()+1)}-${pad(dl.getDate())}T${pad(dl.getHours())}:${pad(dl.getMinutes())}`;
+  return `<div class="page-head"><div><h2>系統設定</h2><div class="sub">改完按該區的「儲存」就會立刻套用到學員畫面。</div></div></div>
+  <div class="card" style="margin-bottom:18px"><h3>⏰ 截止時間</h3>
+    <div class="row"><input type="datetime-local" class="input" id="dlIn" value="${dlv}" style="max-width:300px"><button class="btn primary" id="dlSave">儲存截止時間</button></div>
+    <div class="muted" style="font-size:15px;margin-top:8px">目前：${fmtDue(DB.settings.deadline)}。首頁的大倒數、作業說明和各頁提醒都會跟著改。過了截止時間仍可繳交，但會標記「遲交」。</div></div>
+
+  <div class="card" style="margin-bottom:18px"><h3>⭐ 功能開關</h3>
+    <label class="row" style="gap:14px;cursor:pointer;align-items:flex-start;padding:6px 0">
+      <input type="checkbox" id="peerOn" ${PEER()?"checked":""} style="width:26px;height:26px;margin-top:2px;accent-color:var(--accent)">
+      <div><b style="font-size:18px">組間互評</b><div class="muted" style="font-size:15px">開啟時，學員要看各組簡報並評分，組長要送出全組的分數、名次和評語。關閉後，學員、組長的互評頁面和提醒都會隱藏，已經填的分數會保留，重新開啟就會出現。</div></div>
+    </label></div>
+
+  <div class="card"><div class="row"><h3 style="margin:0">📋 作業說明</h3><span class="spacer"></span><button class="btn small" id="bPreview">看學員畫面</button></div>
+    <div class="help" style="margin-top:12px">小技巧：一行就是一段。用 <b>**文字**</b> 會變成螢光筆重點；寫 <b>{截止}</b> 會自動換成截止時間；老師的話裡單獨一行寫 <b>[ABC]</b> 會顯示 ABC 三格。<br>補充資料一行一筆：「標題 | 來源 | 網址」（來源可省略），用「## 小標」分類。討論問題一行一題，開頭寫題號，例如「1.1 題目內容」。</div>
+    <h3 style="margin-top:20px">開頭</h3>
+    ${fld("bEyebrow","小標",B.eyebrow)}${fld("bTitle","標題",B.title)}${fld("bLead","說明",B.lead)}${fld("bNext","時間軸最後一站（標題｜說明）",B.nextEvent,{hint:"例如：第二次領袖營｜課堂上小組成員互評。留空就不顯示。"})}
+    <h3 style="margin-top:20px">老師的話</h3>${fld("bLetter","內容",B.letter,{area:true,rows:8})}
+    <h3 style="margin-top:20px">個人反思心得</h3>
+    <div class="row" style="gap:14px;align-items:flex-start"><div style="flex:2;min-width:240px">${fld("bIndC","內容",B.ind.content)}</div><div style="flex:1;min-width:160px">${fld("bIndL","長度",B.ind.length)}</div></div>
+    ${fld("bIndT","說明",B.ind.text,{area:true,rows:3})}${fld("bIndH","提示框（可留空）",B.ind.hint,{area:true,rows:2})}
+    <h3 style="margin-top:20px">小組報告</h3>${fld("bGrpT","說明",B.grp.text,{area:true,rows:4})}${fld("bGrpN","格式備註",B.grp.note)}
+    ${B.cases.map((c,i)=>`<details class="card" style="margin-top:14px;padding:14px 18px" ${i===0?"open":""}><summary style="cursor:pointer;font-weight:700;font-size:18px">${esc(c.tag)}｜${esc(c.short)}</summary>
+      <div class="row" style="gap:14px;align-items:flex-start">
+        <div style="flex:1;min-width:140px">${fld(`c${i}tag`,"標籤",c.tag)}</div><div style="flex:1;min-width:120px">${fld(`c${i}part`,"部分名稱",c.part)}</div>
+        <div style="flex:1;min-width:160px">${fld(`c${i}short`,"卡片短名",c.short)}</div><div style="flex:1;min-width:140px">${fld(`c${i}sub`,"卡片副標",c.sub)}</div></div>
+      <div class="row" style="gap:14px;align-items:flex-start"><div style="flex:1;min-width:140px">${fld(`c${i}pages`,"頁數上限（系統檢查用）",c.pages,{type:"number"})}</div><div style="flex:1;min-width:160px">${fld(`c${i}pnote`,"頁數文字",c.pageNote)}</div><div style="flex:2;min-width:220px">${fld(`c${i}title`,"標題",c.title)}</div></div>
+      ${fld(`c${i}desc`,"說明",c.desc,{area:true,rows:4})}${fld(`c${i}refs`,"補充資料（可留空）",c.refs,{area:true,rows:5})}${fld(`c${i}hint`,"提示框（可留空）",c.hint,{area:true,rows:3})}${fld(`c${i}qs`,"討論問題",c.qs,{area:true,rows:8})}
+    </details>`).join("")}
+    <h3 style="margin-top:20px">結語</h3>${fld("bClose","內容",B.closing,{area:true,rows:2})}
+    <div class="row" style="margin-top:18px"><button class="btn" id="bReset">還原成原始作業說明</button><span class="spacer"></span><button class="btn primary big" id="bSave">儲存作業說明</button></div>
+  </div>`;
+}
+function bindTSettings(){
+  $("#dlSave").onclick=()=>{const v=new Date($("#dlIn").value).getTime();if(!v){toast("時間格式不正確");return}DB.settings.deadline=v;toast(`截止時間已改為 ${fmtDue(v)}`);render()};
+  $("#peerOn").onchange=e=>{DB.settings.peerOn=e.target.checked;toast(e.target.checked?"已開啟組間互評":"已關閉組間互評，學員端的互評頁面已隱藏");render()};
+  const v=id=>$("#"+id).value;
+  const collect=()=>({eyebrow:v("bEyebrow"),title:v("bTitle"),lead:v("bLead"),nextEvent:v("bNext"),letter:v("bLetter"),
+    ind:{content:v("bIndC"),length:v("bIndL"),text:v("bIndT"),hint:v("bIndH")},grp:{text:v("bGrpT"),note:v("bGrpN")},
+    cases:BRIEF.cases.map((c,i)=>({tag:v(`c${i}tag`),part:v(`c${i}part`),short:v(`c${i}short`),sub:v(`c${i}sub`),pages:Math.max(0,parseInt(v(`c${i}pages`))||0),pageNote:v(`c${i}pnote`),title:v(`c${i}title`),desc:v(`c${i}desc`),refs:v(`c${i}refs`),hint:v(`c${i}hint`),qs:v(`c${i}qs`)})),
+    closing:v("bClose")});
+  $("#bSave").onclick=()=>{BRIEF=collect();toast("作業說明已儲存");go("brief")};
+  $("#bPreview").onclick=()=>{BRIEF=collect();go("brief");toast("已套用，這是學員看到的畫面")};
+  $("#bReset").onclick=async()=>{if(await dialog({title:"還原作業說明？",body:"會回到最初從講義整理的內容，你改過的地方都會不見。",buttons:[{l:"取消",v:false},{l:"還原",v:true,primary:true}]})){BRIEF=JSON.parse(JSON.stringify(BRIEF_DEFAULT));toast("已還原");render()}};
+}
+
+/* ================= 老師：連續批改 ================= */
+function gradeList(){
+  const all=DB.students.filter(s=>DB.essays[s.id]);
+  return S.tFilter==="todo"?all.filter(s=>essayStatus(s.id)==="submitted"&&!DB.tEssay[s.id]):all;
+}
+function viewTGrade(){
+  const list=gradeList(), sel=S.sel&&DB.essays[S.sel]?S.sel:list[0]?.id;
+  S.sel=sel;
+  const stu=sel&&byId(sel), nv=DB.versions[sel]?.length||0, ver=S.ver&&S.ver<=nv?S.ver:null, e=sel?(ver?essayVer(sel,ver):DB.essays[sel]):null, ts=DB.tEssay[sel];
+  const pos=list.findIndex(s=>s.id===sel);
+  return `<div class="page-head"><div><h2>批改個人作業</h2><div class="sub">在下方輸入分數，按「儲存，下一份」會自動跳到下一位。</div></div><span class="spacer"></span>${downloadMenu()}</div>
+  <div class="split">
+    <div class="card" style="padding:0">
+      <div style="padding:10px;border-bottom:1px solid var(--line)"><div class="fs" style="display:flex"><button data-tf="all" class="${S.tFilter==="all"?"on":""}" style="flex:1">全部</button><button data-tf="todo" class="${S.tFilter==="todo"?"on":""}" style="flex:1">待批改 ${ungraded().length}</button></div></div>
+      <div class="scroll">${list.length?ALLG.map(g=>{const m=list.filter(s=>s.group===g);return m.length?`<div style="padding:6px 14px;background:var(--soft);font-weight:700;font-size:15px">第 ${g} 組</div>`+m.map(s=>`<div class="list-item ${s.id===sel?"on":""}" data-sid="${s.id}"><span>${esc(s.name)}</span><span class="spacer"></span>${DB.tEssay[s.id]?`<b style="color:var(--accent)">${DB.tEssay[s.id].score}</b>`:""} ${statusPill(s.id)}</div>`).join(""):""}).join(""):`<div class="empty"><b>都批改完了</b>切換到「全部」可以回頭看。</div>`}</div>
+    </div>
+    <div>${!e?`<div class="card empty"><b>目前沒有作業</b></div>`:`
+      <div class="card" style="margin-bottom:16px">
+        <div class="row"><h3 style="margin:0;font-size:20px">第${stu.group}組 ${esc(stu.name)}｜${esc(e.title)}</h3><span class="spacer"></span>${statusPill(sel)}<span class="muted">${countChars(e.text)} 字</span><button class="btn small" id="tdl">下載這份</button></div>
+        ${nv>1?`<div class="row" style="margin-top:10px;gap:8px"><span class="muted">版本：</span>${Array.from({length:nv},(_,i)=>i+1).map(v=>`<button class="btn small ${(ver||nv)===v?"primary":""}" data-ver="${v}">v${v}${v===nv?"（最新）":""}｜${fmtTime(DB.versions[sel][v-1].at)}</button>`).join("")}</div>`:""}
+        ${e.status==="draft"?'<div class="note" style="margin:10px 0 0">這位同學還沒按繳交，下面是草稿。</div>':""}
+      </div>
+      <div class="pages" id="tpages"></div>`}</div>
+  </div>
+  ${e?`<div class="gradebar"><div class="in">
+    <button class="btn" id="gPrev" ${pos<=0?"disabled":""}>← 上一份</button>
+    <b>第${stu.group}組 ${esc(stu.name)}</b>
+    <input class="sc" id="tsc" type="number" inputmode="numeric" min="0" max="100" value="${ts?.score??""}" placeholder="分數">
+    <input class="cm" id="tcm" value="${esc(ts?.comment||"")}" placeholder="評語（選填）">
+    <button class="btn primary big" id="gNext">儲存，下一份 →</button>
+  </div></div>`:""}`;
+}
+function bindTGrade(){
+  bindDownloadMenu();
+  $$("[data-tf]").forEach(b=>b.onclick=()=>{S.tFilter=b.dataset.tf;S.ver=null;go("t-grade",null)});
+  $$("[data-sid]").forEach(el=>el.onclick=()=>{S.ver=null;go("t-grade",el.dataset.sid)});
+  $$("[data-ver]").forEach(el=>el.onclick=()=>{S.ver=+el.dataset.ver;go("t-grade",S.sel)});
+  const sel=S.sel; if(!sel||!DB.essays[sel]) return;
+  const nv=DB.versions[sel]?.length||0, ver=S.ver&&S.ver<=nv?S.ver:null, e=ver?essayVer(sel,ver):DB.essays[sel];
+  const pc=$("#tpages"); renderPages(pc,byId(sel),e,Math.min(pc.clientWidth||760,820));
+  $("#tdl").onclick=()=>downloadOne(sel,ver||undefined);
+  const list=gradeList(), pos=list.findIndex(s=>s.id===sel);
+  $("#gPrev").onclick=()=>{S.ver=null;go("t-grade",list[pos-1].id)};
+  const saveNext=()=>{
+    const v=$("#tsc").value;
+    if(v!==""){if(+v<0||+v>100){toast("分數要在 0 到 100 之間");return}DB.tEssay[sel]={score:Math.round(+v),comment:$("#tcm").value.trim()};toast(`已儲存 ${byId(sel).name}：${Math.round(+v)} 分`)}
+    const nl=gradeList(); let next;
+    if(S.tFilter==="todo") next=nl.find(s=>s.id!==sel); else next=nl[pos+1];
+    S.ver=null;
+    if(next) go("t-grade",next.id); else {toast("這是最後一份了");go("t-grade",sel)}
+  };
+  $("#gNext").onclick=saveNext;
+  $("#tsc").onkeydown=e=>{if(e.key==="Enter")saveNext()};
+  $("#tcm").onkeydown=e=>{if(e.key==="Enter")saveNext()};
+  if($("#tsc").value==="") $("#tsc").focus({preventScroll:true});
+}
+
+/* ================= 老師：小組簡報 ================= */
+function viewTGroups(){
+  const g=S.sel||1, ts=DB.tGroup[g];
+  return `<div class="page-head"><div><h2>小組簡報評分</h2></div></div>
+  <div class="split">
+    <div class="card" style="padding:0">${ALLG.map(x=>`<div class="list-item ${x===g?"on":""}" data-tg="${x}"><span>第 ${x} 組</span><span class="muted" style="font-size:14px">${TOPICS[x-1]}</span><span class="spacer"></span>${DB.tGroup[x]?`<b style="color:var(--accent)">${DB.tGroup[x].score}</b>`:'<span class="pill grey">未評</span>'}</div>`).join("")}</div>
+    <div>
+      <div class="card" style="margin-bottom:16px"><div class="row"><h3 style="margin:0;font-size:20px">第 ${g} 組${TOPICS[g-1]?"｜"+TOPICS[g-1]:""}</h3><span class="spacer"></span>${PEER()?`<span class="muted">互評平均 ${peerReceived(g)??"—"} 分，平均第 ${rankReceived(g)??"—"} 名</span>`:""}${DB.pdfs[g]?`<button class="btn small" id="gdl">下載 ${esc(DB.pdfs[g].name)}</button>`:""}</div></div>
+      ${!PEER()?"":(()=>{const rc=ALLG.filter(x=>DB.finals[x]).map(x=>({x,f:DB.finals[x]}));return `<details class="card" style="margin-bottom:16px" ${rc.length?"open":""}><summary style="cursor:pointer;font-weight:700;font-size:18px">其他組給第 ${g} 組的評分與評語（${rc.length} 組已送出）</summary>
+        ${rc.length?`<table style="margin-top:10px"><thead><tr><th>評分組</th><th class="num">分數</th><th class="num">名次</th><th>評語</th></tr></thead><tbody>${rc.map(({x,f})=>`<tr><td>第 ${x} 組${x===g?'<span class="muted">（自評）</span>':""}</td><td class="num"><b>${f.scores[g]}</b></td><td class="num">第 ${f.ranks[g]} 名</td><td>${f.comments?.[g]?esc(f.comments[g]):'<span class="muted">—</span>'}</td></tr>`).join("")}</tbody></table>`:'<div class="muted" style="margin-top:8px">還沒有組別送出</div>'}</details>`})()}
+      ${slidesHTML(g)}
+    </div>
+  </div>
+  <div class="gradebar"><div class="in">
+    <button class="btn" id="gp" ${g===1?"disabled":""}>← 上一組</button><b>第 ${g} 組</b>
+    <input class="sc" id="gsc" type="number" inputmode="numeric" min="0" max="100" value="${ts?.score??""}" placeholder="分數">
+    <input class="cm" id="gcm" value="${esc(ts?.comment||"")}" placeholder="評語（選填）">
+    <button class="btn primary big" id="gn">${g<7?"儲存，下一組 →":"儲存"}</button></div></div>`;
+}
+function bindTGroups(){
+  const g=S.sel||1;
+  $$("[data-tg]").forEach(el=>el.onclick=()=>go("t-groups",+el.dataset.tg));
+  const gd=$("#gdl"); if(gd) gd.onclick=()=>{const p=DB.pdfs[g];p.blob?saveFile(p.name,p.blob):toast("這是展示用的示意簡報，組長上傳真的 PDF 後就能下載")};
+  $("#gp").onclick=()=>go("t-groups",g-1);
+  const sv=()=>{const v=$("#gsc").value;if(v!==""){if(+v<0||+v>100){toast("分數要在 0 到 100 之間");return}DB.tGroup[g]={score:Math.round(+v),comment:$("#gcm").value.trim()};toast(`已儲存第 ${g} 組`)}go("t-groups",g<7?g+1:g)};
+  $("#gn").onclick=sv; $("#gsc").onkeydown=e=>{if(e.key==="Enter")sv()};
+  mountPdfs();
+}
+
+/* ================= 老師：互評結果 ================= */
+function viewTPeer(){
+  const pg=S.sel?.g||1, pv=S.sel?.sid, pvStu=pv&&byId(pv), pvData=pv&&DB.peer[pv];
+  return `<div class="page-head"><div><h2>小組互評結果</h2><div class="sub">每一列是評分的組別，每一欄是被評的組別，格子裡是「分數／名次」。</div></div><span class="spacer"></span>${downloadMenu()}</div>
+  <div class="card" style="padding:0;overflow:auto"><table class="matrix">
+    <thead><tr><th>評分組 ＼ 被評組</th>${ALLG.map(t=>`<th class="num">第 ${t} 組</th>`).join("")}</tr></thead>
+    <tbody>${ALLG.map(g=>{const f=DB.finals[g];return `<tr><td>第 ${g} 組 ${f?`<span class="muted" style="font-size:14px">${fmtTime(f.at)}</span>`:'<span class="pill no">未送出</span>'}</td>${ALLG.map(t=>`<td class="num">${f?`${f.scores[t]}<span class="muted" style="font-size:14px">／第${f.ranks[t]}名</span>${f.comments?.[t]?' <span title="有評語" style="color:var(--gold)">●</span>':""}`:'<span class="cell-empty">—</span>'}</td>`).join("")}</tr>`}).join("")}
+      <tr class="avg"><td>平均分數</td>${ALLG.map(t=>`<td class="num">${peerReceived(t)??"—"}</td>`).join("")}</tr>
+      <tr class="avg"><td>平均名次</td>${ALLG.map(t=>`<td class="num">${rankReceived(t)??"—"}</td>`).join("")}</tr>
+      <tr class="final"><td>老師評分</td>${ALLG.map(t=>`<td class="num">${DB.tGroup[t]?.score??"—"}</td>`).join("")}</tr></tbody></table></div>
+  <h2 style="margin-top:32px">各組送出的評語</h2>
+  <div class="muted" style="margin-bottom:12px">點開可以看到該組給七組的評語，以及整體評語。</div>
+  ${ALLG.map(g=>{const f=DB.finals[g];return f?`<details class="card" style="margin-bottom:10px;padding:14px 18px"><summary style="cursor:pointer;font-weight:700;font-size:17px">第 ${g} 組的評分（${fmtTime(f.at)} 送出）${f.overall?'<span class="muted" style="font-weight:400">｜有整體評語</span>':""}</summary><div style="margin-top:10px">${finalTable(f)}</div></details>`:`<div class="card muted" style="margin-bottom:10px;padding:14px 18px">第 ${g} 組還沒送出</div>`}).join("")}
+  <h2 style="margin-top:32px">每位學生的個人評分</h2>
+  <div class="muted" style="margin-bottom:12px">選一組，再點學生姓名，可以看到他給每一組的分數和評語。<span style="color:var(--gold)">●</span> 表示有寫評語。</div>
+  <div class="row" style="margin-bottom:12px">${ALLG.map(g=>`<button class="btn small ${g===pg?"primary":""}" data-pgp="${g}">第 ${g} 組</button>`).join("")}</div>
+  ${memberMatrix(pg,{hiId:pv,clickable:true})}
+  ${pvStu?`<div class="card" style="margin-top:16px" id="pvCard"><div class="row"><h3 style="margin:0">${esc(pvStu.name)}（${pvStu.id}）的個人評分</h3><span class="spacer"></span><span class="muted">已評 ${peerDone(pv)} / 7 組</span></div>
+    ${pvData?`<table style="margin-top:10px"><thead><tr><th>被評組</th><th class="num">分數</th><th>評語</th></tr></thead><tbody>${ALLG.map(t=>{const v=pvData[t];return `<tr><td>第 ${t} 組${TOPICS[t-1]?"｜"+TOPICS[t-1]:""}${t===pvStu.group?' <span class="muted">（本組）</span>':""}</td><td class="num"><b>${v?.score??"—"}</b></td><td>${v?.comment?esc(v.comment):'<span class="muted">沒有評語</span>'}</td></tr>`}).join("")}</tbody></table>`:'<div class="muted" style="margin-top:10px">這位同學還沒有評分</div>'}</div>`:""}`;
+}
+function bindTPeer(){
+  bindDownloadMenu();
+  $$("[data-pgp]").forEach(b=>b.onclick=()=>go("t-peer",{g:+b.dataset.pgp}));
+  $$("[data-pv]").forEach(r=>r.onclick=()=>{go("t-peer",{g:byId(r.dataset.pv).group,sid:r.dataset.pv});setTimeout(()=>$("#pvCard")?.scrollIntoView({behavior:"smooth",block:"center"}),50)});
+}
+
+/* ================= 路由 ================= */
+function render(){
+  if(S.flush){const f=S.flush;S.flush=null;f()}
+  const app=$("#app"), u=S.user; S.leave=null; $("#modal").innerHTML="";
+  applyZoom();
+  if(!u){
+    if(S.tab==="tlogin"){app.innerHTML=viewTeacherLogin();bindTLogin();return}
+    if(!PUBLIC_TABS.includes(S.tab)) S.tab="home";
+    app.innerHTML=publicShell(S.tab==="brief"?viewBrief():viewPublicHome());
+    (S.tab==="brief"?bindBrief:bindPublic)();
+    $("#openLogin").onclick=()=>openLogin(null);
+    $("#tLogin").onclick=e=>{e.preventDefault();S.tab="tlogin";render()};
+    $$("[data-tab]").forEach(b=>b.onclick=()=>nav(b.dataset.tab));
+    $$("[data-z]").forEach(b=>b.onclick=()=>{const d=+b.dataset.z;let i=ZL.indexOf(ZOOM);if(i<0)i=1;i=d===0?1:Math.max(0,Math.min(ZL.length-1,i+d));ZOOM=ZL[i];try{localStorage.setItem("hwZoom",ZOOM)}catch(e){}render()});
+    window.scrollTo(0,0); return;
+  }
+  let tabs,V;
+  if(u.teacher){
+    tabs=[{k:"home",l:"首頁"},{k:"t-grade",l:"批改個人作業",b:ungraded().length||""},{k:"t-groups",l:"小組報告評分"},...(PEER()?[{k:"t-peer",l:"互評結果"}]:[]),{k:"brief",l:"作業說明"},{k:"t-settings",l:"⚙ 系統設定"}];
+    if(S.tab==="t-peer"&&!PEER()) S.tab="home";
+    V={"t-settings":[viewTSettings,bindTSettings],brief:[viewBrief,bindBrief],home:[viewTHome,bindTHome],"t-grade":[viewTGrade,bindTGrade],"t-groups":[viewTGroups,bindTGroups],"t-peer":[viewTPeer,bindTPeer]};
+  }else{
+    const mem=groupMembers(u.group), miss=mem.filter(s=>essayStatus(s.id)!=="submitted").length;
+    tabs=[{k:"home",l:"首頁"},{k:"brief",l:"作業說明"},{k:"essay",l:"我的作業",b:essayStatus(u.id)==="submitted"?"":"!"},...(PEER()?[{k:"peer",l:ownUploaded(u)?"幫各組評分":"幫各組評分 🔒",b:ownUploaded(u)&&peerDone(u.id)<7?7-peerDone(u.id):""}]:[])];
+    if(u.leader){tabs.splice(3,0,{k:"upload",l:"上傳簡報",b:DB.pdfs[u.group]?"":"!"});if(PEER())tabs.push({k:"gsubmit",l:"送出小組評分",b:DB.finals[u.group]?"":"!"});tabs.push({k:"members",l:"組員狀況",b:miss||""})}
+    else if(PEER()) tabs.push({k:"matrix",l:"全組評分彙整"});
+    if(!PEER()&&["peer","gsubmit","matrix"].includes(S.tab)) S.tab="home";
+    V={brief:[viewBrief,bindBrief],home:[viewHome,bindHome],essay:[viewEssay,bindEssay],peer:[viewPeer,bindPeer],matrix:[viewMatrix],gsubmit:[viewGroupSubmit,bindGroupSubmit],members:[viewMembers,bindMembers],upload:[viewUpload,bindUpload]};
+  }
+  const [view,bind]=V[S.tab]||V.home;
+  if(S.tab!=="essay") S.draft=null;
+  if(S.tab!=="gsubmit") S.rk=null;
+  app.innerHTML=shell(tabs,view());
+  $("#logout").onclick=async()=>{if(S.leave&&S.leave()){const c=await dialog({title:"評分還沒儲存",body:"確定要登出嗎？還沒儲存的評分會不見。",buttons:[{l:"取消",v:false},{l:"登出",v:true,primary:true}]});if(!c)return}S={...S,user:null,tab:"home",sel:null,draft:null,leave:null};render();toast("已登出")};
+  $$("[data-tab]").forEach(b=>b.onclick=()=>nav(b.dataset.tab));
+  $$("[data-z]").forEach(b=>b.onclick=()=>{const d=+b.dataset.z;let i=ZL.indexOf(ZOOM);if(i<0)i=1;i=d===0?1:Math.max(0,Math.min(ZL.length-1,i+d));ZOOM=ZL[i];try{localStorage.setItem("hwZoom",ZOOM)}catch(e){}render()});
+  bind&&bind();
+  window.scrollTo(0,0);
+}
+setInterval(()=>{$$(".deadline").forEach(el=>{el.outerHTML=countdown()})},60000);
+document.fonts?.ready?.then(()=>{if(S.user&&S.tab!=="essay")render()});
+render();
+</script>
+</body>
+</html>

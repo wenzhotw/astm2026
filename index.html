@@ -82,6 +82,8 @@ td.num,th.num{text-align:center}
 .field input,.field textarea,.input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:18px}
 .field input:focus,.field textarea:focus,.input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
 .err{color:var(--warn);min-height:1.6em;font-weight:500}
+.files{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}.files .file{display:flex;flex-direction:column;gap:2px;border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--card);color:var(--ink);text-decoration:none}
+.files .file:hover{border-color:var(--accent);background:var(--accent-soft)}.files .file span{font-size:24px}.files .file small{color:var(--muted);font-size:14px}
 .demo-pick{display:grid;gap:10px;margin:10px 0}.demo-pick button{font:inherit;text-align:left;border:2px solid var(--line);background:var(--card);border-radius:14px;padding:12px 16px;cursor:pointer;color:var(--ink)}
 .demo-pick button:hover{border-color:var(--accent);background:var(--accent-soft)}.demo-pick b{display:block;font-size:18px}.demo-pick span{font-size:15px;color:var(--muted)}
 .demo-accts{margin-top:22px;border-top:1px dashed var(--line);padding-top:14px;font-size:15px}
@@ -594,6 +596,7 @@ async function nav(tab,sel=null){
     const c=await dialog({title:"評分還沒儲存",body:r.msg,buttons:[{l:"取消",v:"cancel"},{l:"不儲存",v:"discard"},{l:"儲存後離開",v:"save",primary:true}]});
     if(c==="cancel") return; if(c==="save"&&!r.save()) return;
   }}
+  if(tab==="brief"&&!S.user?.teacher){go("home");setTimeout(()=>document.getElementById("b-letter")?.scrollIntoView({behavior:"smooth",block:"start"}),60);return}
   go(tab,sel);
 }
 
@@ -794,18 +797,11 @@ function publicShell(body){
   return `<header class="top"><h1>課程作業繳交系統</h1><div class="row" style="gap:10px">
     <span class="fs" title="調整字的大小"><button data-z="-1" aria-label="字變小">A−</button><button data-z="0" class="on" style="min-width:64px">${Math.round(ZOOM*100)}%</button><button data-z="1" aria-label="字變大">A+</button></span>
     <button class="btn primary small" id="openLogin">學員登入</button></div></header>
-  <main><nav class="tabs">${[["home","首頁"],["brief","作業說明"]].map(([k,l])=>`<button class="tab ${S.tab===k?"on":""}" data-tab="${k}">${l}</button>`).join("")}</nav>${body}
+  <main><nav class="tabs">${[["home","首頁"]].map(([k,l])=>`<button class="tab ${S.tab===k?"on":""}" data-tab="${k}">${l}</button>`).join("")}</nav>${body}
   <div style="text-align:center;margin-top:40px"><a href="#" id="tLogin" class="muted" style="font-size:15px">老師登入</a></div></main>`;
 }
 function viewPublicHome(){
-  return `${bigCountdown()}
-  <div class="page-head"><div><h2>ASTM 課間作業</h2><div class="sub">第一次與第二次領袖營之間，要完成下面兩份作業。</div></div></div>
-  <div class="pub-actions">
-    <div class="card"><div class="muted" style="font-size:15px">個人作業｜每個人都要交</div><div class="t">✍️ 個人反思心得</div><div class="d">總結第一次領袖營的學習反思，不超過 1500 字。直接在系統打字，會自動排版成兩頁 A4。</div><button class="btn primary big" data-go="essay">去寫心得</button></div>
-    <div class="card"><div class="muted" style="font-size:15px">小組作業｜由組長上傳</div><div class="t">📊 小組報告</div><div class="d">${BRIEF.cases.map(c=>`${esc(c.short)}（${esc(c.part)}）`).join(" ＋ ")}，合成一份 PDF。</div><button class="btn big" data-go="upload">組長上傳報告</button></div>
-    ${PEER()?`<div class="card"><div class="muted" style="font-size:15px">小組上傳後開放</div><div class="t">⭐ 幫各組評分</div><div class="muted" style="font-size:15px;margin-top:-4px">第 ${PR()} 次互評</div><div class="d">看完各組的簡報後給分。本組簡報上傳後才能開始。</div><button class="btn big" data-go="peer">去評分</button></div>`:""}
-  </div>
-  <div class="hw-banner" style="margin-top:20px"><div style="font-size:30px">📋</div><div style="flex:1;min-width:220px"><b style="font-size:18px">還不清楚要交什麼？</b><div class="muted">題目、頁數、討論問題和補充資料，都整理在作業說明裡，不用登入就能看。</div></div><button class="btn" data-go="brief">看作業說明</button></div>
+  return `${bigCountdown()}${viewBrief()}
   ${CONFIG.demo?`<div class="card" style="margin-top:20px;border-style:dashed"><h3 style="margin:0 0 4px">🧪 試用：選一種身分直接體驗</h3><div class="muted" style="font-size:15px">展示模式才有這一區，資料都是假的，重新整理就會清空。</div>${DEMO_PICK}</div>`:""}`;
 }
 function bindPublic(){
@@ -1189,6 +1185,7 @@ const BRIEF_DEFAULT={
      desc:"學習小組的目的不只是完成作業任務，更重要的是**創造一個行為實驗室**，讓學員實踐、檢驗、練習、強化課堂上的學習。各位要努力練習如何將學習小組建構成為高績效團隊，每一位同學都應努力發揮其作用，並檢驗彼此接受及給予影響的情況。\n這是你們的小組第二次一起完成案例學習的任務，請針對團隊的互動依下列項目反思，並提交一份小組報告（2 頁 ppt 簡報格式），列為小組報告的附錄 2。",refs:"",hint:"",
      qs:"3.1 小組完成任務的團隊效益（1 到 5 分，5 分是完美）\n3.2 小組的團隊合作效益（1 到 5 分，5 分是完美）\n3.3 小組的團隊學習效益（1 到 5 分，5 分是完美）\n3.4 跟第一次的小組學習比較有何不同？為什麼？\n3.5 有那些學到的觀念／原則／方法可用於提高小組協作效益？\n3.6 你們會採取哪些不同的作法讓小組協作更有效益？\n3.7 從小組互動及各自的管理經驗中，大家對團隊建設及組織文化建設的認知有何想法？有何共識？面對的是那些挑戰？\n3.8 你們如何定義小組的初衷及對組員 ABC 的標準、小組成員的行為是否需要調整？為什麼？（提醒：記得這些共識是為了在第二次領袖營時，能通過有效地做好小組成員互評，完成小組成為高績效團隊的挑戰：小組展現最佳效能並幫助每位組員成為更好領導者。）"}
   ],
+  caseFolder:"",
   closing:"好好珍惜並享受你們的共同學習之旅！\n我愛大家！期待再續前緣！"
 };
 let BRIEF=JSON.parse(JSON.stringify(BRIEF_DEFAULT));
@@ -1216,7 +1213,7 @@ function refsHTML(t){
   });
   return html?`<div class="refs">${html}</div>`:"";
 }
-function viewBrief(){
+function viewBrief({top=true}={}){
   const B=BRIEF, u=S.user, dl=fmtTime(DB.settings.deadline), stu=u&&!u.teacher, lead=stu&&u.leader;
   const left=DB.settings.deadline-Date.now(), days=Math.max(0,Math.ceil(left/864e5)), mp=maxPages()||1;
   let esSt="", grSt="";
@@ -1230,12 +1227,12 @@ function viewBrief(){
     esSt=`<span class="pill grey">已交 ${n} / ${DB.students.length} 人</span>`; grSt=`<span class="pill grey">已上傳 ${Object.keys(DB.pdfs).length} / 7 組</span>`;
   }
   const [nb,na]=(B.nextEvent||"").split("｜");
-  const toc=[["b-top","總覽"],["b-letter","老師的話"],["b-ind","個人反思心得"],["b-grp","小組報告"],...B.cases.map((c,i)=>[`b-c${i+1}`,`${c.tag.replace(/\s*(主體|附錄.*)$/,"")} ${c.short}`,1])];
+  const toc=[...(top?[["b-top","總覽"]]:[]),...(B.caseFolder||B.cases.some(c=>c.files)?[["b-files","個案資料"]]:[]),["b-letter","老師的話"],["b-ind","個人反思心得"],["b-grp","小組報告"],...B.cases.map((c,i)=>[`b-c${i+1}`,`${c.tag.replace(/\s*(主體|附錄.*)$/,"")} ${c.short}`,1])];
   return `<div class="bw">
   <nav class="toc" id="toc"><div class="tt">目錄</div>${toc.map(([id,t,sub])=>`<a href="#${id}" data-jump="${id}" class="${sub?"sub":""}">${esc(t)}</a>`).join("")}</nav>
   <article class="brief">
   ${u&&u.teacher?`<div class="note info row" style="justify-content:space-between">這是學員看到的作業說明。<button class="btn small" data-go="t-settings">編輯作業說明</button></div>`:""}
-  <section id="b-top">
+  ${top?`<section id="b-top">
     <div class="eyebrow">${esc(B.eyebrow)}</div>
     <h1>${esc(B.title)}</h1>
     <p class="lead">${md(B.lead)}</p>
@@ -1248,8 +1245,9 @@ function viewBrief(){
       <div class="it"><div class="ic">✍️</div><div><div class="nm">個人反思心得</div><div class="ds">每個人都要交｜${esc(B.ind.length)}（兩頁）</div><div style="margin-top:4px">${esSt}</div></div>${stu||!u?`<button class="btn primary" data-go="essay">去寫心得</button>`:""}</div>
       <div class="it g"><div class="ic">📊</div><div><div class="nm">小組報告</div><div class="ds">組長上傳一份 PDF｜${esc(pagesText())}</div><div style="margin-top:4px">${grSt}</div></div>${lead?`<button class="btn primary" data-go="upload">去上傳</button>`:!u?`<button class="btn" data-go="upload">組長上傳</button>`:""}</div>
     </div>
-  </section>
+  </section>`:""}
 
+  ${B.caseFolder||B.cases.some(c=>c.files)?`<section id="b-files"><h2>📚 個案資料</h2><div class="files">${B.cases.flatMap(c=>(c.files||"").split("\n").map(l=>l.split("|").map(x=>x.trim())).filter(x=>x[1]).map(([t,url])=>`<a class="file" href="${esc(url)}" target="_blank" rel="noopener"><span>📄</span><b>${esc(t)}</b><small>${esc(c.part)}｜${esc(c.short)}</small></a>`)).join("")}</div>${B.caseFolder?`<a class="btn" href="${esc(B.caseFolder)}" target="_blank" rel="noopener" style="margin-top:10px">📁 打開整個個案資料夾</a>`:""}</section>`:""}
   <section id="b-letter"><h2>老師的話</h2><div class="letter">${paras(B.letter)}</div></section>
 
   <section id="b-ind">
@@ -1280,7 +1278,7 @@ function viewBrief(){
 function bindBrief(){
   $$("[data-go]").forEach(b=>b.onclick=()=>{if(b.dataset.go==="t-settings")go("t-settings");else nav(b.dataset.go)});
   $$("[data-jump]").forEach(a=>a.onclick=e=>{e.preventDefault();document.getElementById(a.dataset.jump)?.scrollIntoView({behavior:"smooth",block:"start"})});
-  const ids=["b-top","b-letter","b-ind","b-grp",...BRIEF.cases.map((c,i)=>`b-c${i+1}`)], tb=$("#totop");
+  const ids=["b-top","b-files","b-letter","b-ind","b-grp",...BRIEF.cases.map((c,i)=>`b-c${i+1}`)], tb=$("#totop");
   let last=null;
   const spy=()=>{
     if(!$("#toc")){window.removeEventListener("scroll",spy);return}
@@ -1403,8 +1401,9 @@ function viewTSettings(){
         <div style="flex:1;min-width:140px">${fld(`c${i}tag`,"標籤",c.tag)}</div><div style="flex:1;min-width:120px">${fld(`c${i}part`,"部分名稱",c.part)}</div>
         <div style="flex:1;min-width:160px">${fld(`c${i}short`,"卡片短名",c.short)}</div><div style="flex:1;min-width:140px">${fld(`c${i}sub`,"卡片副標",c.sub)}</div></div>
       <div class="row" style="gap:14px;align-items:flex-start"><div style="flex:1;min-width:140px">${fld(`c${i}pages`,"頁數上限（系統檢查用）",c.pages,{type:"number"})}</div><div style="flex:1;min-width:160px">${fld(`c${i}pnote`,"頁數文字",c.pageNote)}</div><div style="flex:2;min-width:220px">${fld(`c${i}title`,"標題",c.title)}</div></div>
-      ${fld(`c${i}desc`,"說明",c.desc,{area:true,rows:4})}${fld(`c${i}refs`,"補充資料（可留空）",c.refs,{area:true,rows:5})}${fld(`c${i}hint`,"提示框（可留空）",c.hint,{area:true,rows:3})}${fld(`c${i}qs`,"討論問題",c.qs,{area:true,rows:8})}
+      ${fld(`c${i}desc`,"說明",c.desc,{area:true,rows:4})}${fld(`c${i}files`,"個案檔案（一行一個：檔名 | 雲端連結，可留空）",c.files||"",{area:true,rows:3})}${fld(`c${i}refs`,"補充資料（可留空）",c.refs,{area:true,rows:5})}${fld(`c${i}hint`,"提示框（可留空）",c.hint,{area:true,rows:3})}${fld(`c${i}qs`,"討論問題",c.qs,{area:true,rows:8})}
     </details>`).join("")}
+    <h3 style="margin-top:20px">個案資料夾</h3>${fld("bFolder","整個個案資料夾的雲端連結（可留空）",B.caseFolder||"")}
     <h3 style="margin-top:20px">結語</h3>${fld("bClose","內容",B.closing,{area:true,rows:2})}
     <div class="row" style="margin-top:18px"><button class="btn" id="bReset">還原成原始作業說明</button><span class="spacer"></span><button class="btn primary big" id="bSave">儲存作業說明</button></div>
   </div>`;
@@ -1429,8 +1428,8 @@ function bindTSettings(){
   const v=id=>$("#"+id).value;
   const collect=()=>({eyebrow:v("bEyebrow"),title:v("bTitle"),lead:v("bLead"),nextEvent:v("bNext"),letter:v("bLetter"),
     ind:{content:v("bIndC"),length:v("bIndL"),text:v("bIndT"),hint:v("bIndH")},grp:{text:v("bGrpT"),note:v("bGrpN")},
-    cases:BRIEF.cases.map((c,i)=>({tag:v(`c${i}tag`),part:v(`c${i}part`),short:v(`c${i}short`),sub:v(`c${i}sub`),pages:Math.max(0,parseInt(v(`c${i}pages`))||0),pageNote:v(`c${i}pnote`),title:v(`c${i}title`),desc:v(`c${i}desc`),refs:v(`c${i}refs`),hint:v(`c${i}hint`),qs:v(`c${i}qs`)})),
-    closing:v("bClose")});
+    cases:BRIEF.cases.map((c,i)=>({tag:v(`c${i}tag`),part:v(`c${i}part`),short:v(`c${i}short`),sub:v(`c${i}sub`),pages:Math.max(0,parseInt(v(`c${i}pages`))||0),pageNote:v(`c${i}pnote`),title:v(`c${i}title`),desc:v(`c${i}desc`),files:v(`c${i}files`),refs:v(`c${i}refs`),hint:v(`c${i}hint`),qs:v(`c${i}qs`)})),
+    caseFolder:v("bFolder").trim(),closing:v("bClose")});
   $("#bSave").onclick=async()=>{const b=collect(); if(BACKEND){try{await call("saveSettings",{brief:b},{busyMsg:"儲存中…"})}catch(e){return}} BRIEF=b;toast("作業說明已儲存");go("brief")};
   $("#bPreview").onclick=()=>{BRIEF=collect();go("brief");toast("已套用，這是學員看到的畫面")};
   $("#bReset").onclick=async()=>{if(await dialog({title:"還原作業說明？",body:"會回到最初從講義整理的內容，你改過的地方都會不見。",buttons:[{l:"取消",v:false},{l:"還原",v:true,primary:true}]})){BRIEF=JSON.parse(JSON.stringify(BRIEF_DEFAULT)); if(BACKEND){try{await call("saveSettings",{brief:""},{busyMsg:"儲存中…"});BRIEF=JSON.parse(JSON.stringify(BRIEF_DEFAULT))}catch(e){return}} toast("已還原");render()}};
@@ -1658,8 +1657,9 @@ function render(){
   if(!u){
     if(S.tab==="tlogin"){app.innerHTML=viewTeacherLogin();bindTLogin();return}
     if(!PUBLIC_TABS.includes(S.tab)) S.tab="home";
-    app.innerHTML=publicShell(S.tab==="brief"?viewBrief():viewPublicHome());
-    (S.tab==="brief"?bindBrief:bindPublic)();
+    if(S.tab==="brief") S.tab="home";
+    app.innerHTML=publicShell(viewPublicHome());
+    bindPublic(); bindBrief();
     $("#openLogin").onclick=()=>openLogin(null);
     $("#tLogin").onclick=e=>{e.preventDefault();S.tab="tlogin";render()};
     $$("[data-tab]").forEach(b=>b.onclick=()=>nav(b.dataset.tab));
@@ -1673,12 +1673,12 @@ function render(){
     V={"t-settings":[viewTSettings,bindTSettings],brief:[viewBrief,bindBrief],home:[viewTHome,bindTHome],"t-grade":[viewTGrade,bindTGrade],"t-groups":[viewTGroups,bindTGroups],"t-peer":[viewTPeer,bindTPeer]};
   }else{
     const mem=groupMembers(u.group), miss=mem.filter(s=>essayStatus(s.id)!=="submitted").length;
-    tabs=[{k:"home",l:"首頁"},{k:"brief",l:"作業說明"},{k:"essay",l:"我的作業",b:essayStatus(u.id)==="submitted"?"":"!"},...(PEER()?[{k:"peer",l:ownUploaded(u)?"幫各組評分":"幫各組評分 🔒",b:ownUploaded(u)&&peerDone(u.id)<7?7-peerDone(u.id):""}]:[])];
+    tabs=[{k:"home",l:"首頁"},{k:"essay",l:"我的作業",b:essayStatus(u.id)==="submitted"?"":"!"},...(PEER()?[{k:"peer",l:ownUploaded(u)?"幫各組評分":"幫各組評分 🔒",b:ownUploaded(u)&&peerDone(u.id)<7?7-peerDone(u.id):""}]:[])];
     if(u.leader){tabs.splice(3,0,{k:"upload",l:"上傳簡報",b:DB.pdfs[u.group]?"":"!"});if(PEER())tabs.push({k:"gsubmit",l:"送出小組評分",b:DB.finals[u.group]?"":"!"});tabs.push({k:"members",l:"組員狀況",b:miss||""})}
     else if(PEER()) tabs.push({k:"matrix",l:"全組評分彙整"});
     if(PEER()&&Object.keys(DB.history).length) tabs.push({k:"results",l:"互評結果"});
     if(!PEER()&&["peer","gsubmit","matrix"].includes(S.tab)) S.tab="home";
-    V={brief:[viewBrief,bindBrief],home:[viewHome,bindHome],essay:[viewEssay,bindEssay],peer:[viewPeer,bindPeer],matrix:[viewMatrix],gsubmit:[viewGroupSubmit,bindGroupSubmit],members:[viewMembers,bindMembers],upload:[viewUpload,bindUpload],results:[viewSResults,bindSResults]};
+    V={brief:[viewBrief,bindBrief],home:[()=>viewHome()+'<div style="margin-top:28px">'+viewBrief({top:false})+"</div>",()=>{bindHome();bindBrief()}],essay:[viewEssay,bindEssay],peer:[viewPeer,bindPeer],matrix:[viewMatrix],gsubmit:[viewGroupSubmit,bindGroupSubmit],members:[viewMembers,bindMembers],upload:[viewUpload,bindUpload],results:[viewSResults,bindSResults]};
   }
   const [view,bind]=V[S.tab]||V.home;
   if(S.tab!=="essay") S.draft=null;

@@ -27,8 +27,7 @@ await page.goto(file);
 
 // 1. 不登入就能看首頁和作業說明
 ok(await page.isVisible("[data-cdh]"), "公開首頁有大倒數");
-await page.click('[data-tab="brief"]');
-ok(await page.isVisible(".brief h1"), "不登入可以看作業說明");
+ok(await page.isVisible(".brief h1") && !(await page.isVisible('[data-tab="brief"]')), "首頁就是作業說明，不用登入就能看");
 
 // 2. 點寫心得會要求登入，登入後直接到我的作業
 await page.click('[data-go="essay"]');

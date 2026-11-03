@@ -537,7 +537,6 @@ function samplePdfBlob(g){
   return doc.output("blob");
 }
 // 各組簡報下載：學員要等本組上傳後才能下載別組的（跟互評一樣，避免先參考別組）
-const canGetReports=()=>S.user?.teacher||(S.user&&!!DB.pdfs[S.user.group]);
 async function downloadReport(g){const p=DB.pdfs[g];if(!p)return;busy("正在下載…");try{const b=await reportBlob(g);busy();if(b)await saveFile(p.name,b)}catch(e){busy();toast("下載失敗")}}
 async function downloadAllReports(){
   const gs=ALLG.filter(g=>DB.pdfs[g]); if(!gs.length){toast("還沒有組別上傳簡報");return}
@@ -546,16 +545,6 @@ async function downloadAllReports(){
     busy("壓縮中…",100);const b=await zip.generateAsync({type:"blob"});busy();await saveFile(`各組簡報_第${PR()}次_${gs.length}組.zip`,b)}
   catch(e){busy();toast("打包失敗")}
 }
-function viewReports(){
-  const u=S.user;
-  if(!canGetReports()) return `<div class="page-head"><div><h2>各組簡報</h2></div></div><div class="card empty"><div style="font-size:44px">🔒</div><b>本組簡報還沒上傳</b>本組上傳簡報後，就可以下載各組的簡報。</div>`;
-  const n=ALLG.filter(g=>DB.pdfs[g]).length;
-  return `<div class="page-head"><div><h2>各組簡報 <span class="pill draft" style="font-size:16px;vertical-align:middle">第 ${PR()} 次</span></h2><div class="sub">已上傳 ${n} / 7 組。可以一組一組下載，也可以一次下載全部。</div></div><span class="spacer"></span><button class="btn primary" id="dlAllRep" ${n?"":"disabled"}>⬇ 下載全部簡報（ZIP）</button></div>
-  <div class="card" style="padding:0;overflow:auto"><table><thead><tr><th>組別</th><th>檔案</th><th>頁數</th><th>上傳時間</th><th></th></tr></thead><tbody>
-  ${ALLG.map(g=>{const p=DB.pdfs[g];return `<tr><td><b>第 ${g} 組</b>${u&&!u.teacher&&g===u.group?' <span class="muted">（本組）</span>':""}</td><td>${p?esc(p.name):'<span class="pill no">還沒上傳</span>'}</td><td class="muted">${p?.pages??(p?"—":"")}</td><td class="muted">${p?fmtTime(p.at):""}</td><td style="text-align:right">${p?`<button class="btn small" data-dlr="${g}">⬇ 下載</button>`:""}</td></tr>`}).join("")}
-  </tbody></table></div>`;
-}
-function bindReports(){$$("[data-dlr]").forEach(b=>b.onclick=()=>downloadReport(+b.dataset.dlr));const a=$("#dlAllRep");if(a)a.onclick=downloadAllReports}
 // 小組報告 PDF：正式模式從雲端硬碟抓，抓過就快取
 const PDFCACHE={};
 async function reportBlob(g){
@@ -999,7 +988,7 @@ function viewPeer(){
     <div class="card empty"><div style="font-size:44px">🔒</div><b>本組簡報還沒上傳</b>${u.leader?"你是組長，請先上傳本組簡報 PDF，上傳後全組就能開始評分。":"要等組長上傳第 "+u.group+" 組的簡報後，才能開始幫各組評分。"}
     ${u.leader?`<div style="margin-top:16px"><button class="btn primary big" data-go="upload">去上傳簡報</button></div>`:""}</div>`;
   const g=S.sel||ALLG.find(x=>!mine[x]&&DB.pdfs[x])||1, cur=mine[g], done=peerDone(u.id), idx=ALLG.indexOf(g);
-  return `<div class="page-head"><div><h2>幫各組評分 <span class="pill draft" style="font-size:16px;vertical-align:middle">第 ${PR()} 次互評</span></h2><div class="sub">看完簡報後打分數。評完按「下一組」，也可以點上面的組別跳過去。</div></div><span class="spacer"></span>
+  return `<div class="page-head"><div><h2>幫各組評分 <span class="pill draft" style="font-size:16px;vertical-align:middle">第 ${PR()} 次互評</span></h2><div class="sub">看完簡報後打分數。評完按「下一組」，也可以點上面的組別跳過去。</div></div><span class="spacer"></span><button class="btn" id="dlAllRep">⬇ 下載全部簡報</button>
     <div style="min-width:200px"><div class="row" style="justify-content:space-between;font-size:15px"><span>進度</span><b>${done} / 7 組</b></div><div class="bar"><i style="width:${done/7*100}%"></i></div></div></div>
   ${done===7&&!S.sel?`<div class="note ok">✓ 七組都評完了！組長會參考全組的分數送出小組評分。</div>`:""}
   <div class="chips">${ALLG.map(x=>`<button class="chip ${mine[x]?"done":""} ${x===g?"on":""}" data-pg="${x}">第 ${x} 組${x===u.group?"（本組）":""}<small>${mine[x]?`✓ ${mine[x].score} 分`:DB.pdfs[x]?"未評":"未上傳"}</small></button>`).join("")}</div>
@@ -1027,6 +1016,7 @@ function bindPeer(){
   const g=S.sel||ALLG.find(x=>!mine()[x]&&DB.pdfs[x])||1, idx=ALLG.indexOf(g);
   $$("[data-pg]").forEach(b=>b.onclick=()=>nav("peer",+b.dataset.pg));
   $$("[data-dlr]").forEach(b=>b.onclick=()=>downloadReport(+b.dataset.dlr));
+  if($("#dlAllRep")) $("#dlAllRep").onclick=downloadAllReports;
   mountPdfs();
   const sc=$("#sc"); if(!sc){const sk=$("#skipG");if(sk)sk.onclick=()=>nav("peer",ALLG[idx+1]);return}
   const clamp=v=>Math.max(0,Math.min(100,v));
@@ -1506,7 +1496,7 @@ function bindTGrade(){
 /* ================= 老師：小組簡報 ================= */
 function viewTGroups(){
   const g=S.sel||1, ts=DB.tGroup[g];
-  return `<div class="page-head"><div><h2>小組簡報評分</h2></div></div>
+  return `<div class="page-head"><div><h2>小組簡報評分</h2></div><span class="spacer"></span><button class="btn" id="dlAllRep">⬇ 下載全部簡報</button></div>
   <div class="split">
     <div class="card" style="padding:0">${ALLG.map(x=>`<div class="list-item ${x===g?"on":""}" data-tg="${x}"><span>第 ${x} 組</span><span class="muted" style="font-size:14px">${TOPICS[x-1]}</span><span class="spacer"></span>${DB.tGroup[x]?`<b style="color:var(--accent)">${DB.tGroup[x].score}</b>`:'<span class="pill grey">未評</span>'}</div>`).join("")}</div>
     <div>
@@ -1524,6 +1514,7 @@ function viewTGroups(){
 }
 function bindTGroups(){
   const g=S.sel||1;
+  $("#dlAllRep").onclick=downloadAllReports;
   $$("[data-tg]").forEach(el=>el.onclick=()=>go("t-groups",+el.dataset.tg));
   const gd=$("#gdl"); if(gd) gd.onclick=async()=>{const p=DB.pdfs[g];busy("正在下載…");try{const b=await reportBlob(g);busy();if(b)saveFile(p.name,b)}catch(e){busy();toast("下載失敗")}};
   $("#gp").onclick=()=>go("t-groups",g-1);
@@ -1677,18 +1668,17 @@ function render(){
   }
   let tabs,V;
   if(u.teacher){
-    tabs=[{k:"home",l:"首頁"},{k:"t-grade",l:"批改個人作業",b:ungraded().length||""},{k:"t-groups",l:"小組報告評分"},{k:"reports",l:"各組簡報"},...(PEER()?[{k:"t-peer",l:"互評結果"}]:[]),{k:"brief",l:"作業說明"},{k:"t-settings",l:"⚙ 系統設定"}];
+    tabs=[{k:"home",l:"首頁"},{k:"t-grade",l:"批改個人作業",b:ungraded().length||""},{k:"t-groups",l:"小組報告評分"},...(PEER()?[{k:"t-peer",l:"互評結果"}]:[]),{k:"brief",l:"作業說明"},{k:"t-settings",l:"⚙ 系統設定"}];
     if(S.tab==="t-peer"&&!PEER()) S.tab="home";
-    V={"t-settings":[viewTSettings,bindTSettings],brief:[viewBrief,bindBrief],home:[viewTHome,bindTHome],"t-grade":[viewTGrade,bindTGrade],"t-groups":[viewTGroups,bindTGroups],"t-peer":[viewTPeer,bindTPeer],reports:[viewReports,bindReports]};
+    V={"t-settings":[viewTSettings,bindTSettings],brief:[viewBrief,bindBrief],home:[viewTHome,bindTHome],"t-grade":[viewTGrade,bindTGrade],"t-groups":[viewTGroups,bindTGroups],"t-peer":[viewTPeer,bindTPeer]};
   }else{
     const mem=groupMembers(u.group), miss=mem.filter(s=>essayStatus(s.id)!=="submitted").length;
     tabs=[{k:"home",l:"首頁"},{k:"brief",l:"作業說明"},{k:"essay",l:"我的作業",b:essayStatus(u.id)==="submitted"?"":"!"},...(PEER()?[{k:"peer",l:ownUploaded(u)?"幫各組評分":"幫各組評分 🔒",b:ownUploaded(u)&&peerDone(u.id)<7?7-peerDone(u.id):""}]:[])];
     if(u.leader){tabs.splice(3,0,{k:"upload",l:"上傳簡報",b:DB.pdfs[u.group]?"":"!"});if(PEER())tabs.push({k:"gsubmit",l:"送出小組評分",b:DB.finals[u.group]?"":"!"});tabs.push({k:"members",l:"組員狀況",b:miss||""})}
     else if(PEER()) tabs.push({k:"matrix",l:"全組評分彙整"});
-    tabs.push({k:"reports",l:"各組簡報"});
     if(PEER()&&Object.keys(DB.history).length) tabs.push({k:"results",l:"互評結果"});
     if(!PEER()&&["peer","gsubmit","matrix"].includes(S.tab)) S.tab="home";
-    V={brief:[viewBrief,bindBrief],home:[viewHome,bindHome],essay:[viewEssay,bindEssay],peer:[viewPeer,bindPeer],matrix:[viewMatrix],gsubmit:[viewGroupSubmit,bindGroupSubmit],members:[viewMembers,bindMembers],upload:[viewUpload,bindUpload],results:[viewSResults,bindSResults],reports:[viewReports,bindReports]};
+    V={brief:[viewBrief,bindBrief],home:[viewHome,bindHome],essay:[viewEssay,bindEssay],peer:[viewPeer,bindPeer],matrix:[viewMatrix],gsubmit:[viewGroupSubmit,bindGroupSubmit],members:[viewMembers,bindMembers],upload:[viewUpload,bindUpload],results:[viewSResults,bindSResults]};
   }
   const [view,bind]=V[S.tab]||V.home;
   if(S.tab!=="essay") S.draft=null;

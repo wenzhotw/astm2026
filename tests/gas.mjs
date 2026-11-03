@@ -93,7 +93,7 @@ await page.waitForSelector('[data-tab="upload"]'); await page.click('[data-tab="
 await page.setInputFiles("#pdfIn", process.env.PDF || "tests/fixtures/sample.pdf");
 await page.waitForSelector(".note.ok", { timeout: 60000 });
 ok(rowsOf("小組報告").some(r => r[0] === 1 && r[2] === "第1組_簡報.pdf"), "組長上傳，試算表記錄「第1組_簡報.pdf」");
-await page.click('[data-tab="reports"]'); await page.waitForSelector("#dlAllRep");
+await page.click('[data-tab="peer"]'); await page.waitForSelector("#dlAllRep");
 { const [z] = await Promise.all([page.waitForEvent("download", { timeout: 60000 }), page.click("#dlAllRep")]);
   const buf = fs.readFileSync(await z.path()); const n = (buf.toString("latin1").match(/_\xe7\xb0\xa1\xe5\xa0\xb1\.pdf/g) || []).length;
   ok(buf.slice(0, 2).toString() === "PK" && n >= 7, "組長可以一次下載七組簡報（ZIP 裡有 7 份 PDF）"); }

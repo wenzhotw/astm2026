@@ -5,22 +5,59 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
 <title>ASTM 2026 作業繳交系統</title>
-<!-- 正式版網址：重新部署時請用「管理部署作業 → 編輯 → 新版本」，網址就不會變。若網址真的變了，改下面三個地方。 -->
-<meta http-equiv="refresh" content="0; url=https://script.google.com/macros/s/AKfycbzyssazIFX3BsZpqxLPrZ2FVbMNdNUxxpxN6w3NSMx5O0a4gT0tdXDtEqKapn4UmQrfeA/exec">
-<script>location.replace("https://script.google.com/macros/s/AKfycbzyssazIFX3BsZpqxLPrZ2FVbMNdNUxxpxN6w3NSMx5O0a4gT0tdXDtEqKapn4UmQrfeA/exec")</script>
+<!-- 正式版網址只寫在下面「進入作業系統」按鈕的 href 一個地方。重新部署請用「管理部署作業 → 編輯 → 新版本」，網址就不會變。 -->
 <style>
-  body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f4f1ea;color:#1f2a2e;font-family:"Noto Sans TC",system-ui,sans-serif;text-align:center}
-  .box{padding:32px 24px}
-  h1{font-size:26px;margin:0 0 12px}
-  p{font-size:18px;color:#5d6a6e;margin:0 0 24px}
-  a{display:inline-block;background:#1f5f5b;color:#fff;text-decoration:none;font-size:20px;font-weight:700;padding:14px 32px;border-radius:12px}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;background:#f4f1ea;color:#1f2a2e;font-family:"Noto Sans TC","Noto Sans CJK TC",system-ui,sans-serif;display:flex;justify-content:center}
+  .box{width:100%;max-width:520px;padding:36px 20px 40px}
+  h1{font-size:26px;margin:0 0 6px;text-align:center}
+  .sub{font-size:16px;color:#5d6a6e;text-align:center;margin:0 0 24px}
+  .go{display:block;text-align:center;background:#1f5f5b;color:#fff;text-decoration:none;font-size:22px;font-weight:700;padding:18px;border-radius:14px}
+  .count{text-align:center;font-size:15px;color:#5d6a6e;margin:10px 0 0}
+  .line{background:#fff3cf;border:1px solid #e8d18a;border-radius:12px;padding:14px 16px;margin:0 0 20px;font-size:16px;line-height:1.6}
+  .help{background:#fffdf8;border:1px solid #ddd6c8;border-radius:14px;padding:18px 18px 8px;margin-top:28px}
+  .help h2{font-size:19px;margin:0 0 4px}
+  .help .err{font-size:15px;color:#5d6a6e;margin:0 0 12px}
+  .help ol{margin:0;padding-left:22px;font-size:17px;line-height:1.65}
+  .help li{margin-bottom:12px}
+  .help b{color:#b5462f}
+  .copy{display:inline-block;margin-top:6px;font:inherit;font-size:16px;font-weight:700;color:#1f5f5b;background:#e3efec;border:0;border-radius:10px;padding:8px 14px}
+  .dev{display:flex;gap:10px;font-size:16px;line-height:1.5;margin-top:8px;color:#1f2a2e}.dev span{flex:none;width:96px;font-weight:700;color:#5d6a6e;font-size:15px}
+  kbd{font:inherit;font-size:14px;background:#fff;border:1px solid #ccc;border-bottom-width:2px;border-radius:5px;padding:0 6px}
+  .acct{font-size:15px;color:#5d6a6e;text-align:center;margin-top:18px}
 </style>
 </head>
 <body>
 <div class="box">
   <h1>ASTM 2026 作業繳交系統</h1>
-  <p>正在前往作業系統，請稍候…</p>
-  <a href="https://script.google.com/macros/s/AKfycbzyssazIFX3BsZpqxLPrZ2FVbMNdNUxxpxN6w3NSMx5O0a4gT0tdXDtEqKapn4UmQrfeA/exec">沒有自動跳轉？請點這裡</a>
+  <p class="sub">高階策略人才管理領袖營｜課間作業</p>
+
+  <div class="line" id="lineTip" hidden>你現在是在 <b>LINE</b> 裡面開啟的。建議先點右下角「<b>⋯</b>」，選「<b>用預設瀏覽器開啟</b>」，比較不會出問題。</div>
+
+  <a class="go" id="go" href="https://script.google.com/macros/s/AKfycbzyssazIFX3BsZpqxLPrZ2FVbMNdNUxxpxN6w3NSMx5O0a4gT0tdXDtEqKapn4UmQrfeA/exec">進入作業系統 →</a>
+  <p class="count" id="count">3 秒後自動進入…</p>
+
+  <div class="help">
+    <h2>🔧 打不開怎麼辦？</h2>
+    <p class="err">如果看到 Google 雲端硬碟的「<b>很抱歉，目前無法開啟這個檔案</b>」，通常是瀏覽器同時登入了好幾個 Google 帳號。請按「上一頁」回到這裡，照下面做：</p>
+    <ol>
+      <li><b>用無痕模式開</b>，再把這個網址貼上：<br><button class="copy" id="copy">📋 複製網址</button>
+        <div class="dev"><span>📱 iPhone</span><div>Safari 右下角分頁圖示 →「私密」</div></div>
+        <div class="dev"><span>📱 Android</span><div>Chrome 右上角「⋮」→「新增無痕式分頁」</div></div>
+        <div class="dev"><span>💻 Windows</span><div>Chrome、Edge 按 <kbd>Ctrl</kbd>＋<kbd>Shift</kbd>＋<kbd>N</kbd></div></div>
+        <div class="dev"><span>💻 Mac</span><div>Chrome 按 <kbd>⌘</kbd>＋<kbd>Shift</kbd>＋<kbd>N</kbd>；Safari 選單「檔案 → 新增私密視窗」</div></div></li>
+      <li>或先<b>登出其他 Google 帳號</b>，只留一個再開。</li>
+      <li>換一個瀏覽器（例如 Safari 換 Chrome，或 Chrome 換 Edge）。</li>
+    </ol>
+  </div>
+  <p class="acct">帳號是學號，密碼是手機號碼</p>
 </div>
+<script>
+  // 在 LINE 內建瀏覽器開啟時，提醒改用預設瀏覽器
+  if(/\bLine\//i.test(navigator.userAgent)||location.hash==="#line") document.getElementById("lineTip").hidden=false;
+  var n=3,c=document.getElementById("count"),url=document.getElementById("go").href;
+  var t=setInterval(function(){n--; if(n<=0){clearInterval(t);c.textContent="正在前往…";location.assign(url)}else c.textContent=n+" 秒後自動進入…"},1000);
+  document.getElementById("copy").onclick=function(){var u="https:\/\/wenzhotw.github.io/astm2026/go/";(navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject()).then(function(){this.textContent="✓ 已複製"}.bind(this)).catch(function(){prompt("請長按複製這個網址",u)})};
+</script>
 </body>
 </html>

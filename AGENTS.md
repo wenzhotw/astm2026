@@ -54,7 +54,7 @@ go/index.html           正式版入口轉址頁（GitHub Pages 的 /go/），�
 tools/video/            介紹影片製作工具（錄展示版畫面、英文旁白、配樂、字幕），見其中的 README
 ```
 
-**重新部署 Apps Script 時一律用「管理部署作業 → 編輯 → 新版本」**，網址才不會變。如果網址真的變了，要同步改 `go/index.html` 裡的三個網址。
+**重新部署 Apps Script 時一律用「管理部署作業 → 編輯 → 新版本」**，網址才不會變。如果網址真的變了，要同步改 `go/index.html` 裡「進入作業系統」按鈕的網址（只有一個地方）。`/go/` 會先顯示 3 秒的入口頁，附「打不開怎麼辦」說明（同時登入多個 Google 帳號時 Apps Script 會打不開），再自動進入。
 
 **改完 `index.html` 一定要跑 `npm run build`**，讓 `gas/index.html` 同步，再 commit 兩個檔案。
 

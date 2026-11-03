@@ -161,6 +161,14 @@ textarea.cmt{width:100%;min-height:80px;padding:10px;border:1px solid var(--line
 .podium{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:18px}.podium>div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 8px;text-align:center}
 .podium .p{font-size:15px;color:var(--muted)}.podium .g{font-size:22px;font-weight:700;margin:2px 0}.podium .s{font-size:14px;color:var(--muted)}.podium>div:first-child{border:2px solid var(--gold);background:var(--gold-soft)}
 @media (max-width:760px){.podium{grid-template-columns:repeat(4,1fr)}}
+.ptab{border-collapse:collapse;font-size:17px;margin:0 auto}.ptab th,.ptab td{text-align:center;padding:6px 8px}
+.ptab .pc{width:42px;border:1px solid #e3ded3}.ptab thead th{border-bottom:2px solid var(--ink)}.ptab .pg{min-width:76px;font-variant-numeric:tabular-nums}
+.ptab .pg small{display:block;font-size:12px;font-weight:400;color:var(--muted)}.ptab .pb{border-right:2px solid var(--ink)}.ptab .pf{background:#f1eee8}
+.ptab input{width:56px;text-align:center;font:inherit;font-weight:700;padding:3px;border:1px solid var(--line);border-radius:6px;background:#fff}
+.pl0{background:#fff}.pl1{background:#e6e6e6}.pl2{background:#b9b9b9}.pl3{background:#4a4a4a;color:#fff}
+.ps,.ps-hi,.ps-lo{outline:2px solid #222;outline-offset:-2px;font-weight:700}.ps-hi{box-shadow:inset 0 0 0 5px #f3c9c0}.ps-lo{box-shadow:inset 0 0 0 5px #c8dbef}
+.ptie{display:block;font-size:12px;color:var(--warn)}
+.plegend{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px;font-size:14px}.plegend>span:not(.muted){border:1px solid #ccc;padding:2px 10px;border-radius:4px}
 .mine td{background:#fffbe9}
 .cell-empty{color:#bbb}
 .rank-list{display:flex;flex-direction:column;gap:8px}
@@ -480,7 +488,11 @@ setInterval(()=>{const el=document.querySelector("[data-cdh]");if(!el)return;con
   for(const k of ["d","h","m","s"]){const x=el.querySelector(`[data-cd="${k}"]`);if(x)x.textContent=k==="d"?c[k]:pad(c[k])}
   el.className="cdh "+cdLevel(c.ms);el.querySelector('[data-cd="msg"]').textContent=cdMsg(c.ms)},1000);
 const peerDone=id=>Object.keys(DB.peer[id]||{}).length;
-function avgFor(g,t){const v=groupMembers(g).map(s=>DB.peer[s.id]?.[t]?.score).filter(x=>x!=null);return v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length*10)/10:null}
+// 獨立評分：全組每個人都評完七組之前，看不到其他組員的分數和評語（老師除外）
+const peerOpen=g=>S.user?.teacher||groupMembers(g).every(s=>peerDone(s.id)===7);
+const peerWaiting=g=>groupMembers(g).filter(s=>peerDone(s.id)<7);
+function lockedNote(g){const w=peerWaiting(g);return `<div class="card empty"><div style="font-size:40px">🔒</div><b>全組評完後才會公開</b>為了讓每個人獨立評分，要等全組 ${groupMembers(g).length} 人都評完七組，才看得到組員的分數和評語。<div style="margin-top:8px">還沒評完：${w.map(s=>esc(s.name)+(s.id===S.user?.id?"（你）":"")).join("、")}</div></div>`}
+function avgFor(g,t){if(!peerOpen(g))return null;const v=groupMembers(g).map(s=>DB.peer[s.id]?.[t]?.score).filter(x=>x!=null);return v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length*10)/10:null}
 function peerReceived(t){const v=Object.values(DB.finals).map(f=>f.scores[t]).filter(x=>x!=null);return v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length*10)/10:null}
 function rankReceived(t){const v=Object.values(DB.finals).map(f=>f.ranks?.[t]).filter(x=>x!=null);return v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length*100)/100:null}
 
@@ -1022,7 +1034,7 @@ function finalTable(f){
 function viewMatrix(){
   const u=S.user, g=u.group, mem=groupMembers(g), fin=DB.finals[g], done=mem.filter(s=>peerDone(s.id)===7).length;
   return `<div class="page-head"><div><h2>第 ${g} 組全組評分彙整</h2><div class="sub">組內已評完 ${done} / ${mem.length} 人。組長會參考這張表，替七組打分並排名後送出。</div></div></div>
-  ${memberMatrix(g,{hiId:u.id})}
+  ${peerOpen(g)?memberMatrix(g,{hiId:u.id}):lockedNote(g)}
   <h3 style="margin-top:24px">組長送出的小組評分</h3>
   ${fin?`<div class="muted" style="margin-bottom:8px">${fmtTime(fin.at)} 送出</div>${finalTable(fin)}`:`<div class="card empty"><b>組長還沒送出</b>送出後會顯示在這裡。</div>`}`;
 }
@@ -1039,11 +1051,11 @@ function viewGroupSubmit(){
   if(!ownUploaded(u)) return `<div class="page-head"><div><h2>送出第 ${g} 組的小組評分</h2></div></div>
     <div class="card empty"><div style="font-size:44px">🔒</div><b>請先上傳本組簡報</b>上傳後組員才能開始評分，之後再回來送出小組評分。<div style="margin-top:16px"><button class="btn primary big" data-go="upload">去上傳簡報</button></div></div>`;
   const notDone=mem.filter(s=>peerDone(s.id)<7);
-  if(!S.rk||S.rk.g!==g){initRank();S.rk.g=g}
+  if(!S.rk||S.rk.g!==g||S.rk.open!==peerOpen(g)){initRank();S.rk.g=g;S.rk.open=peerOpen(g)}
   return `<div class="page-head"><div><h2>送出第 ${g} 組的小組評分 <span class="pill draft" style="font-size:16px;vertical-align:middle">第 ${PR()} 次互評</span></h2><div class="sub">參考組員的分數，替七組打分、寫評語，並拖曳排出第 1 到第 7 名。</div></div></div>
   ${notUploaded().length?`<div class="note" style="background:var(--warn-soft);color:var(--warn)">第 ${notUploaded().join("、")} 組還沒上傳簡報。可以先填分數和評語，但要等七組都上傳後才能送出。</div>`:""}
-  ${fin?`<div class="note ok">✓ 已在 ${fmtTime(fin.at)} 送出，修改後可以重新送出。</div>`:notDone.length?`<div class="note">還有 ${notDone.length} 位組員沒評完：${notDone.map(s=>esc(s.name)).join("、")}。建議等全員評完再送出，但你也可以先送。</div>`:`<div class="note info">全組都評完了，可以送出。</div>`}
-  <details ${fin?"":"open"} style="margin-bottom:22px"><summary style="cursor:pointer;font-weight:700;font-size:18px;min-height:40px">① 組員的個人評分</summary>${memberMatrix(g,{hiId:u.id})}</details>
+  ${fin?`<div class="note ok">✓ 已在 ${fmtTime(fin.at)} 送出，修改後可以重新送出。</div>`:notDone.length?`<div class="note">還有 ${notDone.length} 位組員沒評完：${notDone.map(s=>esc(s.name)).join("、")}。全組評完之前，組員的分數和評語都不會公開（包括你），以確保每個人獨立評分。</div>`:`<div class="note info">全組都評完了，可以送出。</div>`}
+  <details ${fin?"":"open"} style="margin-bottom:22px"><summary style="cursor:pointer;font-weight:700;font-size:18px;min-height:40px">① 組員的個人評分</summary>${peerOpen(g)?memberMatrix(g,{hiId:u.id}):lockedNote(g)}</details>
   <div class="row" style="margin-bottom:10px"><h3 style="margin:0;font-size:18px">② 打分數並排名</h3><span class="spacer"></span><button class="btn small" id="autoRank">依分數高低重新排序</button></div>
   <div class="muted" style="font-size:15px;margin-bottom:10px">按住左邊的 ⠿ 上下拖曳，或用 ↑ ↓ 調整順序。分數預設是組內平均，每組都可以寫評語，點「組員評語」可以參考組員寫了什麼。</div>
   <div class="rank-list" id="rankList"></div>
@@ -1070,7 +1082,7 @@ function renderRank(){
     <div class="sc row" style="gap:6px"><input type="number" inputmode="numeric" min="0" max="100" data-rs="${t}" value="${scores[t]}" placeholder="分數"><span class="muted">分</span></div>
     <div class="arrows"><button class="btn" data-mv-up="${t}" ${i===0?"disabled":""} aria-label="往上">↑</button><button class="btn" data-mv-dn="${t}" ${i===6?"disabled":""} aria-label="往下">↓</button></div>
     <div class="rc"><span class="lbl muted" style="padding-top:8px;text-align:right">評語</span><textarea data-rcm="${t}" rows="1" placeholder="給第 ${t} 組的評語（選填）">${esc(S.rk.comments[t]||"")}</textarea></div>
-    ${(()=>{const mc=groupMembers(S.user.group).map(m=>({n:m.name,c:DB.peer[m.id]?.[t]?.comment})).filter(x=>x.c);return mc.length?`<details class="mc"><summary>組員評語（${mc.length}）</summary>${mc.map(x=>`<div>・${esc(x.n)}：${esc(x.c)}</div>`).join("")}</details>`:""})()}
+    ${(()=>{const mc=!peerOpen(S.user.group)?[]:groupMembers(S.user.group).map(m=>({n:m.name,c:DB.peer[m.id]?.[t]?.comment})).filter(x=>x.c);return mc.length?`<details class="mc"><summary>組員評語（${mc.length}）</summary>${mc.map(x=>`<div>・${esc(x.n)}：${esc(x.c)}</div>`).join("")}</details>`:""})()}
     </div>`).join("");
   updateRankMeta();
   bindRank();
@@ -1507,10 +1519,11 @@ function roundStats(R){
 }
 const gName=g=>`第${"一二三四五六七"[g-1]}組`;
 const f1=x=>x==null?"—":(Math.round(x*100)/100).toString();
-function roundView(R,live){
+function roundView(R,live,profKey){
   const {raters,st,order}=roundStats(R);
   if(!raters.length) return `<div class="card empty"><div style="font-size:44px">⏳</div><b>還沒有組別送出小組評分</b>組長送出後，結果會出現在這裡。</div>`;
   const byT=Object.fromEntries(st.map(x=>[x.t,x]));
+  if(profKey) return `<h3 style="margin:4px 0 10px">小組互評整合表 <span class="muted" style="font-size:15px;font-weight:400">${raters.length} / 7 組已送出</span></h3>${profTable(R,profKey,live)}`+roundDetails(R,live,raters);
   return `
   <h3 style="margin:4px 0 10px">七組綜合排名 <span class="muted" style="font-size:15px;font-weight:400">依各組給的名次取平均，數字越小越好（${raters.length} / 7 組已送出）</span></h3>
   <div class="podium">${order.map(x=>`<div><div class="p">第 ${x.final} 名</div><div class="g">${gName(x.t)}</div><div class="s">平均名次 ${f1(x.avgRank)}${x.avgScore!=null?`<br>平均 ${f1(x.avgScore)} 分`:""}</div></div>`).join("")}</div>
@@ -1525,7 +1538,27 @@ function roundView(R,live){
     <tbody>${ALLG.map(t=>`<tr><td><b>${gName(t)}</b></td>${ALLG.map(g=>{const v=R.scores[g]?.[t];return `<td class="num">${v==null||v===""?'<span class="cell-empty">—</span>':f1(+v)}</td>`}).join("")}<td class="num"><b>${f1(byT[t].avgScore)}</b></td></tr>`).join("")}
     ${R.basis?`<tr class="avg"><td>計分方式</td>${ALLG.map(g=>`<td style="font-size:13px;font-weight:400">${esc(R.basis[g]||"")}</td>`).join("")}<td></td></tr>`:""}</tbody></table></div>
     ${R.note?`<div class="muted" style="font-size:14px;margin-top:8px">${esc(R.note)}</div>`:""}</details>
-  ${R.best?`<h3 style="margin:28px 0 10px">各組評語：第一名與最後一名的原因</h3>
+${roundDetails(R,live,raters)}`;
+}
+function bindProf(R,key,live){
+  const ov=S.prof[key];
+  $$("[data-pfin]").forEach(i=>i.onchange=()=>{const t=+i.dataset.pfin,v=+i.value;if(!(v>=1&&v<=7)){toast("Final 要是 1 到 7");i.value=ov[t]?.final??"";return}
+    ov[t]={...ov[t],final:v,grade:ov[t]?.gradeEdited?ov[t].grade:95-v};render()});
+  $$("[data-pgr]").forEach(i=>i.onchange=()=>{const t=+i.dataset.pgr,v=+i.value;if(!(v>=0&&v<=100)){toast("成績要在 0 到 100 之間");return}ov[t]={...ov[t],grade:v,gradeEdited:true}});
+  $$("[data-pcsv]").forEach(b=>b.onclick=()=>{
+    const {rows}=profCalc(R), val=sel=>$(sel)?.value??"";
+    dlCsv(`小組互評_老師格式_${key}.csv`,[["",...ALLG.map(g=>CN[g-1]),"OR w Self","Rank","OR w/o Self","Rank","Final","Grades"],
+      ...rows.map(r=>[CN[r.t-1],...ALLG.map(g=>R.ranks[g]?.[r.t]??""),r.w?.toFixed(2)??"",r.wR??"",r.wo?.toFixed(2)??"",r.woR??"",val(`[data-pfin="${r.t}"]`),val(`[data-pgr="${r.t}"]`)])])});
+  $$("[data-papply]").forEach(b=>b.onclick=async()=>{
+    const g2=ALLG.map(t=>({t,v:+($(`[data-pgr="${t}"]`).value)})).filter(x=>$(`[data-pgr="${x.t}"]`).value!=="");
+    const ok=await dialog({title:"存成小組報告成績？",body:g2.map(x=>`第 ${x.t} 組：${x.v} 分`).join("<br>")+"<br><br>會覆蓋「小組報告評分」裡已經打的分數，評語不變。",buttons:[{l:"取消",v:false},{l:"存成成績",v:true,primary:true}]});
+    if(!ok) return;
+    for(const x of g2){DB.tGroup[x.t]={score:x.v,comment:DB.tGroup[x.t]?.comment||""};if(BACKEND)await api("gradeGroup",{g:x.t,...DB.tGroup[x.t]}).catch(e=>toast("沒存成功："+e.message))}
+    toast("已存成小組報告成績");render()});
+}
+
+function roundDetails(R,live,raters){
+  return `  ${R.best?`<h3 style="margin:28px 0 10px">各組評語：第一名與最後一名的原因</h3>
   ${raters.map(g=>{const rk=R.ranks[g],first=ALLG.find(t=>rk[t]===1),last=ALLG.find(t=>rk[t]===7);return `<div class="card" style="margin-bottom:10px;padding:14px 18px">
     <div style="font-weight:700;font-size:18px;margin-bottom:6px">${gName(g)}的評語</div>
     <div style="margin-bottom:6px"><span class="pill ok">第一名：${first?gName(first):"—"}</span> ${esc(R.best[g]||"")}</div>
@@ -1535,11 +1568,43 @@ function roundView(R,live){
   ${live?`<h3 style="margin:28px 0 10px">各組送出的評語</h3>
   ${ALLG.map(g=>{const f=DB.finals[g];return f?`<details class="card" style="margin-bottom:10px;padding:14px 18px"><summary style="cursor:pointer;font-weight:700;font-size:17px">${gName(g)}的評分（${fmtTime(f.at)} 送出）${f.overall?'<span class="muted" style="font-weight:400">｜有整體評語</span>':""}</summary><div style="margin-top:10px">${finalTable(f)}</div></details>`:`<div class="card muted" style="margin-bottom:10px;padding:14px 18px">${gName(g)}還沒送出</div>`}).join("")}`:""}`;
 }
+// 老師的互評整合表（照李老師的格式）：列是被評組，欄是評分組，對角線是自評
+// OR w Self＝含自評的平均名次，OR w/o Self＝不含自評的平均名次；Final 預設依 w/o Self 排序（同分再看 w Self），老師可以改；Grades 預設 第1名94、往下每名少 1 分
+const CN="一二三四五六七八九十";
+function profCalc(R){
+  const raters=ALLG.filter(g=>R.ranks[g]);
+  const rows=ALLG.map(t=>{
+    const all=raters.map(g=>R.ranks[g][t]).filter(x=>x!=null), wo=raters.filter(g=>g!==t).map(g=>R.ranks[g][t]).filter(x=>x!=null);
+    return {t,w:all.length?all.reduce((a,b)=>a+b,0)/all.length:null,wo:wo.length?wo.reduce((a,b)=>a+b,0)/wo.length:null};
+  });
+  const rankBy=k=>{const v=rows.filter(r=>r[k]!=null);rows.forEach(r=>r[k+"R"]=r[k]==null?null:1+v.filter(x=>x[k]<r[k]-1e-9).length)};
+  rankBy("w"); rankBy("wo");
+  [...rows].filter(r=>r.wo!=null).sort((a,b)=>a.wo-b.wo||(a.w??9)-(b.w??9)||a.t-b.t).forEach((r,i)=>{r.final=i+1});
+  rows.forEach(r=>{r.tie=r.wo!=null&&rows.some(x=>x!==r&&x.wo!=null&&Math.abs(x.wo-r.wo)<1e-9)});
+  return {raters,rows};
+}
+function profTable(R,key,live){
+  const {rows}=profCalc(R), ov=(S.prof=S.prof||{})[key]=S.prof[key]||{};
+  const fin=r=>ov[r.t]?.final??r.final, grade=r=>ov[r.t]?.grade??(live&&DB.tGroup[r.t]?.score!=null?DB.tGroup[r.t].score:(fin(r)?95-fin(r):""));
+  const f2=x=>x==null?"":x.toFixed(2);
+  const cell=(g,t)=>{const v=R.ranks[g]?.[t];const r=rows[t-1];if(v==null)return `<td class="pc"></td>`;
+    const d=Math.abs(v-(fin(r)||v)), lv=d>=6?3:d>=4?2:d>=2?1:0, self=g===t;
+    return `<td class="pc pl${lv}${self?(v<=2?" ps-hi":v>=6?" ps-lo":" ps"):""}">${v}</td>`};
+  return `<div class="card prof" style="padding:14px;overflow:auto">
+  <table class="ptab"><thead><tr><th class="pc"></th>${ALLG.map(g=>`<th class="pc">${CN[g-1]}</th>`).join("")}<th class="pg">OR w Self<small>含自評平均</small></th><th class="pg">Rank<small>名次</small></th><th class="pg">OR w/o Self<small>不含自評平均</small></th><th class="pg pb">Rank<small>名次</small></th><th class="pg pf">Final<small>最終名次</small></th><th class="pg pf">Grades<small>成績</small></th></tr></thead>
+  <tbody>${rows.map(r=>`<tr><th class="pc">${CN[r.t-1]}</th>${ALLG.map(g=>cell(g,r.t)).join("")}
+    <td class="pg">${f2(r.w)}</td><td class="pg">${r.wR??""}</td><td class="pg">${f2(r.wo)}</td><td class="pg pb">${r.woR??""}</td>
+    <td class="pg pf"><input data-pfin="${r.t}" value="${fin(r)??""}" inputmode="numeric">${r.tie?'<span class="ptie" title="不含自評平均同分，請確認先後">同分</span>':""}</td>
+    <td class="pg pf"><input data-pgr="${r.t}" value="${grade(r)}" inputmode="numeric"></td></tr>`).join("")}</tbody></table>
+  <div class="plegend"><span class="pl0">0 to 1</span><span class="pl1">2 to 3</span><span class="pl2">4 to 5</span><span class="pl3">6 to 7</span><span class="ps-hi">Self Rank 1 or 2</span><span class="ps-lo">Self Rank 6 or 7</span>
+    <span class="muted">格子是各組給的名次；灰階是和 Final 差幾名，框線是自評。Final、Grades 可以直接改。</span></div>
+  <div class="row" style="margin-top:12px;gap:10px"><button class="btn" data-pcsv="${key}">⬇ 下載這張表（Excel 可開）</button>${live?`<button class="btn primary" data-papply="${key}">把 Grades 存成小組報告成績</button>`:""}</div></div>`;
+}
 function viewTPeer(){
   const cur=PR(), r=S.sel?.r||cur;
   const label=n=>n<cur?"已結束":n===cur?"進行中":"尚未開始";
-  const body=r<cur?(DB.history[r]?roundView(DB.history[r],false):`<div class="card empty"><b>第 ${r} 次互評沒有資料</b></div>`)
-    :r===cur?roundView(liveRound(),true)
+  const body=r<cur?(DB.history[r]?roundView(DB.history[r],false,`r${r}`):`<div class="card empty"><b>第 ${r} 次互評沒有資料</b></div>`)
+    :r===cur?roundView(liveRound(),true,`r${r}`)
     :`<div class="card empty"><div style="font-size:44px">🗓</div><b>第 ${r} 次互評還沒開始</b>在「⚙ 系統設定」結束第 ${cur} 次互評後，就會開始第 ${cur+1} 次。</div>`;
   return `<div class="page-head"><div><h2>小組互評結果</h2><div class="sub">只呈現各組送出的小組評分（名次、分數、評語），不列出個人評分。</div></div><span class="spacer"></span>${downloadMenu()}</div>
   <div class="rounds">${Array.from({length:PEER_ROUNDS},(_,i)=>i+1).map(n=>`<button class="${n===r?"on":""}" data-rd="${n}"><b>第 ${n} 次互評</b><small>${label(n)}</small></button>`).join("")}</div>
@@ -1557,6 +1622,7 @@ function viewSResults(){
 function bindSResults(){$$("[data-rd]").forEach(b=>b.onclick=()=>go("results",{r:+b.dataset.rd}))}
 function bindTPeer(){
   bindDownloadMenu();
+  { const cur=PR(), r=S.sel?.r||cur; if(r<cur&&DB.history[r]) bindProf(DB.history[r],`r${r}`,false); else if(r===cur) bindProf(liveRound(),`r${r}`,true); }
   $$("[data-rd]").forEach(b=>b.onclick=()=>go("t-peer",{r:+b.dataset.rd}));
 }
 

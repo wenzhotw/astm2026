@@ -92,6 +92,17 @@ ok(rowsOf("小組報告").some(r => r[0] === 1 && r[2] === "第1組_簡報.pdf")
 await page.click('[data-tab="peer"]'); await page.waitForSelector("#sc");
 await page.fill("#sc", "88"); await page.fill("#cmt", "很棒"); await page.click("#saveNext"); await page.waitForTimeout(500);
 ok(rowsOf("個人互評").some(r => String(r[0]) === "114900001" && r[4] === 88), "個人互評寫進試算表");
+{ // 獨立評分：組員 114900003 先評一組，組長還看不到他的分數
+  const t3 = ctx.api("login", null, { id: "114900003", pw: "0900000003" }).token;
+  ctx.api("savePeer", t3, { g: 2, score: 77, comment: "獨立" });
+  const t1 = ctx.api("login", null, { id: "114900001", pw: "0900000001" }).token;
+  const sn = ctx.api("refresh", t1, {}).snapshot;
+  ok(!sn.peer["114900003"] && sn.peer["114900001"], "全組評完前，組長拿不到組員的互評內容（只拿到自己的）");
+  const mem = csv.filter(r => +r[0] === 1);
+  for (const m of mem) { const tk = ctx.api("login", null, { id: m[1], pw: m[4] }).token; for (const g of [1, 2, 3, 4, 5, 6, 7]) ctx.api("savePeer", tk, { g, score: 80 + g, comment: "" }); }
+  const sn2 = ctx.api("refresh", t1, {}).snapshot;
+  ok(mem.every(m => Object.keys(sn2.peer[m[1]] || {}).length === 7), "全組都評完後，才看得到全組的互評");
+}
 await page.click('[data-tab="gsubmit"]'); await page.waitForSelector("#rankList");
 for (const g of [1, 2, 3, 4, 5, 6, 7]) { await page.fill(`[data-rs="${g}"]`, String(70 + g)); }
 await page.click("#autoRank"); await page.fill("#overall", "大家都很認真");

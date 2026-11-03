@@ -351,9 +351,13 @@ function snapshot_(sess) {
   rows_(SH.reports).forEach(r => {
     snap.pdfs[Number(r['組別'])] = { kind: 'pdf', name: String(r['檔名']), orig: String(r['原始檔名']), pages: Number(r['頁數']) || null, at: ms_(r['上傳時間']), remote: true };
   });
-  rows_(SH.peer).forEach(r => {
+  // 獨立評分：全組每個人都評完七組之前，學員只拿得到自己的互評
+  const peerRows = rows_(SH.peer), cnt = {};
+  peerRows.forEach(r => { const id = String(r['評分人學號']); (cnt[id] = cnt[id] || {})[Number(r['被評組'])] = 1; });
+  const groupDone = !isT && R.filter(x => x.group === me.group).every(x => Object.keys(cnt[x.id] || {}).length === GROUPS.length);
+  peerRows.forEach(r => {
     const id = String(r['評分人學號']);
-    if (!isT && !sameGroup(id)) return;
+    if (!isT && id !== me.id && !(groupDone && sameGroup(id))) return;
     (snap.peer[id] = snap.peer[id] || {})[Number(r['被評組'])] = { score: Number(r['分數']), comment: String(r['評語'] || '') };
   });
   rows_(SH.finals).forEach(r => {

@@ -33,7 +33,8 @@ ok(await page.isVisible(".brief h1") && !(await page.isVisible('[data-tab="brief
 await page.click('[data-go="essay"]');
 ok(await page.isVisible("#loginForm"), "點「去寫心得」會跳出登入");
 await page.fill("#lid", "114900002"); await page.fill("#lpw", "0900000000");
-await page.click("#loginForm button"); await page.waitForTimeout(300);
+await page.click("#loginForm button");
+await page.waitForFunction(() => (document.querySelector("#lerr")?.textContent || "").length > 0, null, { timeout: 5000 }).catch(() => {});
 ok((await page.textContent("#lerr")).includes("手機"), "手機錯誤會被擋下");
 await page.fill("#lpw", "0900-000-002"); await page.click("#loginForm button"); await page.waitForTimeout(400);
 ok((await page.textContent(".tab.on")).includes("我的作業"), "登入後直接進到我的作業");

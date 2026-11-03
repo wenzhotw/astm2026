@@ -31,6 +31,13 @@ for (const g of [2, 3, 4, 5, 6, 7]) {
   ok(ctx.api("uploadReport", t, { data: tinyPdf, orig: "x.pdf", pages: 3 }).ok, `第 ${g} 組組長上傳報告`);
 }
 
+{ // 第 1 組還沒上傳，組員不能下載別組簡報；老師可以
+  const t2 = ctx.api("login", null, { id: "114900002", pw: "0900000002" }).token;
+  ok(ctx.api("getReport", t2, { g: 2 }).error, "本組還沒上傳前，學員不能下載別組簡報");
+  const tt = ctx.api("teacherLogin", null, { id: "teacher", pw: "pw5678" }).token;
+  ok(ctx.api("getReport", tt, { g: 2 }).data, "老師可以下載各組簡報");
+}
+
 // 3. 前端
 const M = path.resolve("node_modules");
 const libs = { "html2canvas.min.js": "html2canvas/dist/html2canvas.min.js", "jspdf.umd.min.js": "jspdf/dist/jspdf.umd.min.js", "jszip.min.js": "jszip/dist/jszip.min.js", "pdf.min.js": "pdfjs-dist/build/pdf.min.js", "pdf.worker.min.js": "pdfjs-dist/build/pdf.worker.min.js" };
@@ -86,6 +93,12 @@ await page.waitForSelector('[data-tab="upload"]'); await page.click('[data-tab="
 await page.setInputFiles("#pdfIn", process.env.PDF || "tests/fixtures/sample.pdf");
 await page.waitForSelector(".note.ok", { timeout: 60000 });
 ok(rowsOf("小組報告").some(r => r[0] === 1 && r[2] === "第1組_簡報.pdf"), "組長上傳，試算表記錄「第1組_簡報.pdf」");
+await page.click('[data-tab="reports"]'); await page.waitForSelector("#dlAllRep");
+{ const [z] = await Promise.all([page.waitForEvent("download", { timeout: 60000 }), page.click("#dlAllRep")]);
+  const buf = fs.readFileSync(await z.path()); const n = (buf.toString("latin1").match(/_\xe7\xb0\xa1\xe5\xa0\xb1\.pdf/g) || []).length;
+  ok(buf.slice(0, 2).toString() === "PK" && n >= 7, "組長可以一次下載七組簡報（ZIP 裡有 7 份 PDF）"); }
+{ const t2 = ctx.api("login", null, { id: "114900002", pw: "0900000002" }).token;
+  ok(ctx.api("getReport", t2, { g: 2 }).data, "本組上傳後，組員就能下載別組簡報"); }
 { const m = mails.filter(m => m.to === "prof@example.com");
   ok(m.length === 1 && m[0].subject.includes("七組簡報都已上傳") && m[0].htmlBody.includes("第7組_簡報.pdf"), "七組都上傳後，自動寄簡報連結給老師");
   ok([...folders.values()].some(f => f.name === "小組報告" && f.viewers.includes("prof@example.com")), "小組報告資料夾自動分享給老師"); }

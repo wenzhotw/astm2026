@@ -421,7 +421,7 @@ function demoScenario(kind){
     DB.drafts[m.id]={title:"策略與人才：第一次領袖營的學習反思",text:DEMO_ESSAY.join("\n"),at:Date.now()-1800e3}; syncEssay(m.id);
     S.after="essay"; return m;
   }
-  if(kind==="leader"){delete DB.finals[1]; S.after="members"; return DB.students.find(x=>x.group===1&&x.leader)}
+  if(kind==="leader"){delete DB.finals[1]; groupMembers(1).forEach((m,i)=>{if(peerDone(m.id)<7){DB.peer[m.id]={};ALLG.forEach(t=>DB.peer[m.id][t]={score:78+((i*5+t*3)%17),comment:""})}}); S.after="members"; return DB.students.find(x=>x.group===1&&x.leader)}
   S.after=null; return {teacher:true};
 }
 function demoLogin(kind){const u=demoScenario(kind);login(u);if(kind==="teacher")go("t-peer");toast(kind==="member"?"心得已寫好，可以直接試著繳交":kind==="leader"?"可以看組員繳交狀況，也可以送出小組評分":"可以看到所有組別的互評狀況")}
@@ -525,12 +525,43 @@ function applySnap(sn){
 }
 const blobToB64=blob=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(",")[1]);r.onerror=rej;r.readAsDataURL(blob)});
 const b64ToBlob=(b64,type="application/pdf")=>{const bin=atob(b64),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new Blob([u],{type})};
+// 展示模式的示意簡報 PDF（三頁，跟畫面上的示意投影片一樣）
+function samplePdfBlob(g){
+  const {jsPDF}=window.jspdf, doc=new jsPDF({orientation:"landscape",unit:"pt",format:[960,540]}), c=SLIDE_COLORS[g-1];
+  const pages=[[`第 ${g} 組期末報告`,TOPICS[g-1]||`第 ${g} 組期末簡報`,["組員："+groupMembers(g).map(s=>s.name).join("、")]],["研究動機","為什麼關心這個題目？",["問題現況與數據","受影響的族群","現有做法的不足"]],["提案","我們的解決方案",["具體做法與執行步驟","預期效益","可能遇到的困難"]]];
+  pages.forEach(([k,h,li],i)=>{const cv=document.createElement("canvas");cv.width=1920;cv.height=1080;const x=cv.getContext("2d");
+    x.fillStyle=c;x.fillRect(0,0,1920,1080);x.fillStyle="#fff";x.font="500 44px 'Noto Sans TC',sans-serif";x.fillText(k,140,300);
+    x.font="700 96px 'Noto Sans TC',sans-serif";x.fillText(h,140,440);x.font="400 44px 'Noto Sans TC',sans-serif";li.forEach((t,j)=>x.fillText((i?"・":"")+t,140,580+j*80));
+    x.font="400 30px 'Noto Sans TC',sans-serif";x.fillText("（展示用示意簡報）",140,1000);
+    if(i)doc.addPage([960,540],"landscape");doc.addImage(cv.toDataURL("image/jpeg",.9),"JPEG",0,0,960,540)});
+  return doc.output("blob");
+}
+// 各組簡報下載：學員要等本組上傳後才能下載別組的（跟互評一樣，避免先參考別組）
+const canGetReports=()=>S.user?.teacher||(S.user&&!!DB.pdfs[S.user.group]);
+async function downloadReport(g){const p=DB.pdfs[g];if(!p)return;busy("正在下載…");try{const b=await reportBlob(g);busy();if(b)await saveFile(p.name,b)}catch(e){busy();toast("下載失敗")}}
+async function downloadAllReports(){
+  const gs=ALLG.filter(g=>DB.pdfs[g]); if(!gs.length){toast("還沒有組別上傳簡報");return}
+  const zip=new JSZip();
+  try{for(let i=0;i<gs.length;i++){busy(`正在打包簡報（${i+1} / ${gs.length}）`,Math.round(i/gs.length*100));zip.file(DB.pdfs[gs[i]].name,await reportBlob(gs[i]))}
+    busy("壓縮中…",100);const b=await zip.generateAsync({type:"blob"});busy();await saveFile(`各組簡報_第${PR()}次_${gs.length}組.zip`,b)}
+  catch(e){busy();toast("打包失敗")}
+}
+function viewReports(){
+  const u=S.user;
+  if(!canGetReports()) return `<div class="page-head"><div><h2>各組簡報</h2></div></div><div class="card empty"><div style="font-size:44px">🔒</div><b>本組簡報還沒上傳</b>本組上傳簡報後，就可以下載各組的簡報。</div>`;
+  const n=ALLG.filter(g=>DB.pdfs[g]).length;
+  return `<div class="page-head"><div><h2>各組簡報 <span class="pill draft" style="font-size:16px;vertical-align:middle">第 ${PR()} 次</span></h2><div class="sub">已上傳 ${n} / 7 組。可以一組一組下載，也可以一次下載全部。</div></div><span class="spacer"></span><button class="btn primary" id="dlAllRep" ${n?"":"disabled"}>⬇ 下載全部簡報（ZIP）</button></div>
+  <div class="card" style="padding:0;overflow:auto"><table><thead><tr><th>組別</th><th>檔案</th><th>頁數</th><th>上傳時間</th><th></th></tr></thead><tbody>
+  ${ALLG.map(g=>{const p=DB.pdfs[g];return `<tr><td><b>第 ${g} 組</b>${u&&!u.teacher&&g===u.group?' <span class="muted">（本組）</span>':""}</td><td>${p?esc(p.name):'<span class="pill no">還沒上傳</span>'}</td><td class="muted">${p?.pages??(p?"—":"")}</td><td class="muted">${p?fmtTime(p.at):""}</td><td style="text-align:right">${p?`<button class="btn small" data-dlr="${g}">⬇ 下載</button>`:""}</td></tr>`}).join("")}
+  </tbody></table></div>`;
+}
+function bindReports(){$$("[data-dlr]").forEach(b=>b.onclick=()=>downloadReport(+b.dataset.dlr));const a=$("#dlAllRep");if(a)a.onclick=downloadAllReports}
 // 小組報告 PDF：正式模式從雲端硬碟抓，抓過就快取
 const PDFCACHE={};
 async function reportBlob(g){
   const p=DB.pdfs[g]; if(!p) return null;
   if(p.blob) return p.blob;
-  if(!BACKEND) return null;
+  if(!BACKEND) return p.kind==="sample"?samplePdfBlob(g):null;
   const key=g+"@"+p.at;
   if(!PDFCACHE[key]) PDFCACHE[key]=api("getReport",{g}).then(r=>b64ToBlob(r.data));
   return PDFCACHE[key];
@@ -977,6 +1008,7 @@ function viewPeer(){
     <div class="card panel" style="position:sticky;top:84px">
       <div class="muted">第 ${g} 組${g===u.group?"（你的組別）":""}｜${idx+1} / 7</div>
       <h2>第 ${g} 組簡報</h2>
+      ${DB.pdfs[g]?`<button class="btn small" data-dlr="${g}" style="margin-top:6px">⬇ 下載這組簡報</button>`:""}
       ${DB.pdfs[g]?`
       <div style="margin-top:14px;font-weight:500">你的分數（0 到 100）</div>
       <div class="scorebox"><button class="btn" data-adj="-5">−5</button><input id="sc" type="number" inputmode="numeric" min="0" max="100" value="${cur?.score??""}" placeholder="—"><button class="btn" data-adj="5">+5</button></div>
@@ -994,6 +1026,7 @@ function bindPeer(){
   if(!ownUploaded(u)){$$("[data-go]").forEach(b=>b.onclick=()=>nav(b.dataset.go));return}
   const g=S.sel||ALLG.find(x=>!mine()[x]&&DB.pdfs[x])||1, idx=ALLG.indexOf(g);
   $$("[data-pg]").forEach(b=>b.onclick=()=>nav("peer",+b.dataset.pg));
+  $$("[data-dlr]").forEach(b=>b.onclick=()=>downloadReport(+b.dataset.dlr));
   mountPdfs();
   const sc=$("#sc"); if(!sc){const sk=$("#skipG");if(sk)sk.onclick=()=>nav("peer",ALLG[idx+1]);return}
   const clamp=v=>Math.max(0,Math.min(100,v));
@@ -1492,7 +1525,7 @@ function viewTGroups(){
 function bindTGroups(){
   const g=S.sel||1;
   $$("[data-tg]").forEach(el=>el.onclick=()=>go("t-groups",+el.dataset.tg));
-  const gd=$("#gdl"); if(gd) gd.onclick=async()=>{const p=DB.pdfs[g];if(p.kind==="sample"){toast("這是展示用的示意簡報，組長上傳真的 PDF 後就能下載");return}busy("正在下載…");try{const b=await reportBlob(g);busy();if(b)saveFile(p.name,b)}catch(e){busy();toast("下載失敗")}};
+  const gd=$("#gdl"); if(gd) gd.onclick=async()=>{const p=DB.pdfs[g];busy("正在下載…");try{const b=await reportBlob(g);busy();if(b)saveFile(p.name,b)}catch(e){busy();toast("下載失敗")}};
   $("#gp").onclick=()=>go("t-groups",g-1);
   const sv=()=>{const v=$("#gsc").value;if(v!==""){if(+v<0||+v>100){toast("分數要在 0 到 100 之間");return}DB.tGroup[g]={score:Math.round(+v),comment:$("#gcm").value.trim()};if(BACKEND)api("gradeGroup",{g,...DB.tGroup[g]}).catch(err=>toast("分數沒存成功："+err.message));toast(`已儲存第 ${g} 組`)}go("t-groups",g<7?g+1:g)};
   $("#gn").onclick=sv; $("#gsc").onkeydown=e=>{if(e.key==="Enter")sv()};
@@ -1644,17 +1677,18 @@ function render(){
   }
   let tabs,V;
   if(u.teacher){
-    tabs=[{k:"home",l:"首頁"},{k:"t-grade",l:"批改個人作業",b:ungraded().length||""},{k:"t-groups",l:"小組報告評分"},...(PEER()?[{k:"t-peer",l:"互評結果"}]:[]),{k:"brief",l:"作業說明"},{k:"t-settings",l:"⚙ 系統設定"}];
+    tabs=[{k:"home",l:"首頁"},{k:"t-grade",l:"批改個人作業",b:ungraded().length||""},{k:"t-groups",l:"小組報告評分"},{k:"reports",l:"各組簡報"},...(PEER()?[{k:"t-peer",l:"互評結果"}]:[]),{k:"brief",l:"作業說明"},{k:"t-settings",l:"⚙ 系統設定"}];
     if(S.tab==="t-peer"&&!PEER()) S.tab="home";
-    V={"t-settings":[viewTSettings,bindTSettings],brief:[viewBrief,bindBrief],home:[viewTHome,bindTHome],"t-grade":[viewTGrade,bindTGrade],"t-groups":[viewTGroups,bindTGroups],"t-peer":[viewTPeer,bindTPeer]};
+    V={"t-settings":[viewTSettings,bindTSettings],brief:[viewBrief,bindBrief],home:[viewTHome,bindTHome],"t-grade":[viewTGrade,bindTGrade],"t-groups":[viewTGroups,bindTGroups],"t-peer":[viewTPeer,bindTPeer],reports:[viewReports,bindReports]};
   }else{
     const mem=groupMembers(u.group), miss=mem.filter(s=>essayStatus(s.id)!=="submitted").length;
     tabs=[{k:"home",l:"首頁"},{k:"brief",l:"作業說明"},{k:"essay",l:"我的作業",b:essayStatus(u.id)==="submitted"?"":"!"},...(PEER()?[{k:"peer",l:ownUploaded(u)?"幫各組評分":"幫各組評分 🔒",b:ownUploaded(u)&&peerDone(u.id)<7?7-peerDone(u.id):""}]:[])];
     if(u.leader){tabs.splice(3,0,{k:"upload",l:"上傳簡報",b:DB.pdfs[u.group]?"":"!"});if(PEER())tabs.push({k:"gsubmit",l:"送出小組評分",b:DB.finals[u.group]?"":"!"});tabs.push({k:"members",l:"組員狀況",b:miss||""})}
     else if(PEER()) tabs.push({k:"matrix",l:"全組評分彙整"});
+    tabs.push({k:"reports",l:"各組簡報"});
     if(PEER()&&Object.keys(DB.history).length) tabs.push({k:"results",l:"互評結果"});
     if(!PEER()&&["peer","gsubmit","matrix"].includes(S.tab)) S.tab="home";
-    V={brief:[viewBrief,bindBrief],home:[viewHome,bindHome],essay:[viewEssay,bindEssay],peer:[viewPeer,bindPeer],matrix:[viewMatrix],gsubmit:[viewGroupSubmit,bindGroupSubmit],members:[viewMembers,bindMembers],upload:[viewUpload,bindUpload],results:[viewSResults,bindSResults]};
+    V={brief:[viewBrief,bindBrief],home:[viewHome,bindHome],essay:[viewEssay,bindEssay],peer:[viewPeer,bindPeer],matrix:[viewMatrix],gsubmit:[viewGroupSubmit,bindGroupSubmit],members:[viewMembers,bindMembers],upload:[viewUpload,bindUpload],results:[viewSResults,bindSResults],reports:[viewReports,bindReports]};
   }
   const [view,bind]=V[S.tab]||V.home;
   if(S.tab!=="essay") S.draft=null;

@@ -276,7 +276,9 @@ const H = {
   },
 
   getReport(p, sess) {
-    const rep = reportsMap_()[Number(p.g)];
+    const map = reportsMap_(), rep = map[Number(p.g)];
+    // 學員要等本組上傳後，才能看、下載別組的簡報
+    if (sess.role !== 'teacher') { const s = student_(sess); if (Number(p.g) !== s.group && !map[s.group]) return { error: '本組簡報上傳後，才能看其他組的簡報' }; }
     if (!rep) return { error: '這組還沒上傳' };
     const blob = DriveApp.getFileById(rep.fileId).getBlob();
     return { data: Utilities.base64Encode(blob.getBytes()), name: rep.name };

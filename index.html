@@ -1000,7 +1000,7 @@ function viewPeer(){
   const g=S.sel||ALLG.find(x=>!mine[x]&&DB.pdfs[x])||1, cur=mine[g], done=peerDone(u.id), idx=ALLG.indexOf(g);
   return `<div class="page-head"><div><h2>幫各組評分 <span class="pill draft" style="font-size:16px;vertical-align:middle">第 ${PR()} 次互評</span></h2><div class="sub">看完簡報後打分數。評完按「下一組」，也可以點上面的組別跳過去。</div></div><span class="spacer"></span><button class="btn" id="dlAllRep">⬇ 下載全部簡報</button>
     <div style="min-width:200px"><div class="row" style="justify-content:space-between;font-size:15px"><span>進度</span><b>${done} / 7 組</b></div><div class="bar"><i style="width:${done/7*100}%"></i></div></div></div>
-  ${done===7?reasonsCard(u):""}
+  ${done===7?reasonsCard(u):CONFIG.demo?`<div class="note info row" style="justify-content:space-between">🧪 展示用：不想一組一組評，可以一鍵填好七組分數和理由。<button class="btn small" id="demoFillMe">一鍵填好我的評分</button></div>`:""}
   <div class="chips">${ALLG.map(x=>`<button class="chip ${mine[x]?"done":""} ${x===g?"on":""}" data-pg="${x}">第 ${x} 組${x===u.group?"（本組）":""}<small>${mine[x]?`✓ ${mine[x].score} 分`:DB.pdfs[x]?"未評":"未上傳"}</small></button>`).join("")}</div>
   <div class="viewer">
     <div>${slidesHTML(g)}</div>
@@ -1050,6 +1050,7 @@ function bindPeer(){
   $$("[data-dlr]").forEach(b=>b.onclick=()=>downloadReport(+b.dataset.dlr));
   if($("#dlAllRep")) $("#dlAllRep").onclick=downloadAllReports;
   bindReasons(u);
+  if($("#demoFillMe")) $("#demoFillMe").onclick=()=>{demoFillMine();toast(u.leader?"已填好你的評分，可以去「送出小組評分」看全組的分數了":"已填好你的評分");render()};
   mountPdfs();
   const sc=$("#sc"); if(!sc){const sk=$("#skipG");if(sk)sk.onclick=()=>nav("peer",ALLG[idx+1]);return}
   const clamp=v=>Math.max(0,Math.min(100,v));
@@ -1115,7 +1116,7 @@ function viewGroupSubmit(){
   const head=`<div class="page-head"><div><h2>送出第 ${g} 組的小組評分 <span class="pill draft" style="font-size:16px;vertical-align:middle">第 ${PR()} 次互評</span></h2><div class="sub">參考全組的分數，用「組長調整」加減分，排出組長綜合排名，並寫下第一名和最後一名的理由。</div></div></div>`;
   if(!peerOpen(g)){
     const meLeft=!peerComplete(u.id);
-    return head+`${meLeft?`<div class="note" style="background:var(--warn-soft);color:var(--warn)">請先完成<b>你自己的個人評分</b>（七組分數，加上第一名和最後一名的理由）。為了確保獨立評分，組長也要先交出自己的評分，才看得到組員的分數。<div style="margin-top:10px"><button class="btn primary" data-go="peer">去幫各組評分</button></div></div>`:""}${lockedNote(g)}`;
+    return head+`${meLeft?`<div class="note" style="background:var(--warn-soft);color:var(--warn)">請先完成<b>你自己的個人評分</b>（七組分數，加上第一名和最後一名的理由）。為了確保獨立評分，組長也要先交出自己的評分，才看得到組員的分數。<div style="margin-top:10px" class="row"><button class="btn primary" data-go="peer">去幫各組評分</button>${CONFIG.demo?`<button class="btn" id="demoFillMe">🧪 示範：一鍵填好我的評分</button>`:""}</div>${CONFIG.demo?`<div class="muted" style="font-size:14px;margin-top:8px">展示用：按「一鍵填好」會直接幫你填七組分數和理由，馬上就能看到解鎖後的畫面。</div>`:""}</div>`:""}${lockedNote(g)}`;
   }
   if(!S.rk||S.rk.g!==g){initRank();S.rk.g=g}
   const R=memberReasons(g);
@@ -1156,8 +1157,10 @@ function updateRankMeta(){
   $("#rankMsg").innerHTML=bad?`<span style="color:var(--warn);font-weight:500">名次要剛好是 1 到 7，不能重複</span>`:conflict.size?`<span style="color:#8a6420;font-weight:500">黃色的組別：分數高的排在分數低的後面。如果是刻意的，仍然可以送出。</span>`:`<span style="color:var(--ok);font-weight:500">✓ 名次沒問題</span>`;
   const b=rkAt(1),w=rkAt(7); if($("#bestLbl")){$("#bestLbl").textContent=`第一名：第 ${bad||!b?"—":b} 組，理由`;$("#worstLbl").textContent=`最後一名：第 ${bad||!w?"—":w} 組，理由`}
 }
+function demoFillMine(){const u=S.user;DB.peer[u.id]={};ALLG.forEach(t=>DB.peer[u.id][t]={score:80+((t*7+3)%15),comment:""});demoReasons(u.id)}
 function bindGroupSubmit(){
   $$("[data-go]").forEach(b=>b.onclick=()=>nav(b.dataset.go));
+  if($("#demoFillMe")) $("#demoFillMe").onclick=()=>{demoFillMine();toast("已填好你的評分，全組都完成了，現在看得到組員的分數");render()};
   if(!ownUploaded(S.user)||!$("#submitFinal")) return;
   $$("[data-adj-t]").forEach(i=>i.oninput=()=>{S.rk.adj[i.dataset.adjT]=i.value===""?0:Math.round(+i.value);updateRankMeta()});
   $$("[data-rk-t]").forEach(i=>i.oninput=()=>{S.rk.ranks[i.dataset.rkT]=i.value===""?"":Math.round(+i.value);updateRankMeta()});

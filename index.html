@@ -157,6 +157,12 @@ textarea.cmt{width:100%;min-height:80px;padding:10px;border:1px solid var(--line
 .matrix td.num input{width:80px;text-align:center;padding:6px;font-size:18px;font-weight:700;border:1px solid var(--line);border-radius:6px}
 .matrix tr.avg td{background:var(--soft);font-weight:700}
 .matrix tr.final td{background:var(--accent-soft);font-weight:700}
+.progwrap{display:grid;grid-template-columns:minmax(260px,1fr) 2fr;gap:16px;margin-bottom:18px;align-items:start}.progwrap.two{grid-template-columns:1fr 1fr}
+@media (max-width:860px){.progwrap,.progwrap.two{grid-template-columns:1fr}}
+.prog .ph{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px}.prog .pp{font-size:44px;font-weight:700;line-height:1;color:var(--accent)}.prog .pp small{font-size:20px;margin-left:2px}.prog .pp.done{color:var(--ok)}
+.pbar{height:14px;background:#e9e4d9;border-radius:999px;overflow:hidden}.pbar i{display:block;height:100%;background:linear-gradient(90deg,#2f8a7f,#1f5f5b);border-radius:999px;transition:width .4s}.pbar.done i{background:var(--ok)}.pbar.mini{height:6px;grid-column:1/-1}
+.pitems{margin-top:14px;display:grid;gap:10px}.pit{display:grid;grid-template-columns:1fr auto;gap:4px 10px;font-size:16px}.pit b{font-size:15px}
+.ptable td,.ptable th{padding:10px 12px}
 .rs2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.rs2 select{font:inherit;font-size:16px;padding:4px 6px;margin-left:6px;border-radius:8px;border:1px solid var(--line)}@media (max-width:760px){.rs2{grid-template-columns:1fr}}
 .lt input{width:68px;text-align:center;font:inherit;font-weight:700;padding:5px;border:1px solid var(--line);border-radius:8px;background:#fff}.lt tr.conflict td{background:#fff3cf}
 .rk-d0{background:#dcefdc}.rk-d1{background:#eef6e6}.rk-d2{background:#fbf1d6}.rk-d3{background:#f8e2c8}.rk-d4{background:#f6d3c6}.rk-d5{background:#efbcae}
@@ -434,6 +440,8 @@ function demoScenario(kind){
   if(kind==="leader"){delete DB.finals[1]; const L=DB.students.find(x=>x.group===1&&x.leader);
     groupMembers(1).forEach((m,i)=>{if(m.id===L.id)return;DB.peer[m.id]={};ALLG.forEach(t=>DB.peer[m.id][t]={score:78+((i*5+t*3)%17),comment:""});demoReasons(m.id)});
     delete DB.peer[L.id]; delete DB.reasons[L.id]; S.after="gsubmit"; return L}
+  // 老師體驗：讓多數已評分的人補上第 6 組和理由，進度看起來比較真實
+  Object.keys(DB.peer).forEach((id,i)=>{if(i%4===3)return;const p=DB.peer[id];if(!p[6])p[6]={score:80+(i%12),comment:""};demoReasons(id)});
   S.after=null; return {teacher:true};
 }
 function demoLogin(kind){const u=demoScenario(kind);login(u);if(kind==="teacher")go("t-peer");toast(kind==="member"?"心得已寫好，可以直接試著繳交":kind==="leader"?"可以看組員繳交狀況，也可以送出小組評分":"可以看到所有組別的互評狀況")}
@@ -844,6 +852,7 @@ function viewHome(){
     if(PEER()) T.push({cls:fin?"done":"wait",t:"看全組評分彙整",d:fin?"組長已送出本組的小組評分。":`組長還沒送出。組內已評完 ${memDone} / ${mem.length} 人。`,btn:"查看",go:"matrix"});
   }
   return `${bigCountdown()}<div class="page-head"><div><h2>你好，${esc(u.name)}</h2><div class="sub">下面是你要完成的事，照順序做就可以。</div></div></div>
+  <div class="progwrap two">${progCard("我的完成度",myItems(u))}${progCard(`第 ${u.group} 組完成度`,groupItems(u.group),`${groupMembers(u.group).length} 人`)}</div>
   <div class="hw-banner"><div style="font-size:30px">📋</div><div style="flex:1;min-width:220px"><b style="font-size:18px">課間作業：個人反思心得＋小組報告</b><div class="muted">都在 ${fmtTime(DB.settings.deadline)} 截止。題目、頁數和討論問題都在作業說明裡。</div></div><button class="btn" data-go="brief">看作業說明</button></div>
   <div class="tasks">${T.map((t,i)=>`<div class="card task ${t.cls}"><div class="no">${t.cls==="done"?"✓":i+1}</div><div><div class="t">${t.t}</div><div class="d">${t.d}</div></div><div class="act"><button class="btn ${t.cls?"":"primary"}" data-go="${t.go}">${t.btn}</button></div></div>`).join("")}</div>`;
 }
@@ -1368,11 +1377,45 @@ function bindUpload(){
 
 /* ================= 老師：首頁 ================= */
 const ungraded=()=>DB.students.filter(s=>essayStatus(s.id)==="submitted"&&!DB.tEssay[s.id]);
+// ================= 進度儀表板（像 WBS 一樣，把每項工作的完成度算成百分比） =================
+// 正式版學員拿不到組員的互評內容，所以組員是否完成改看後端給的 peerStatus
+const memberPeerDone=id=>DB.peerStatus?.[id]??peerComplete(id);
+const pctOf=items=>items.length?Math.round(items.reduce((a,x)=>a+(x.t?x.d/x.t:0),0)/items.length*100):0;
+function groupItems(g){
+  const mem=groupMembers(g), n=mem.length, it=[{l:"個人反思心得",d:mem.filter(s=>essayStatus(s.id)==="submitted").length,t:n,u:"人"},{l:"上傳小組簡報",d:DB.pdfs[g]?1:0,t:1}];
+  if(PEER()) it.push({l:"個人互評（含理由）",d:mem.filter(s=>memberPeerDone(s.id)).length,t:n,u:"人"},{l:"組長送出小組評分",d:DB.finals[g]?1:0,t:1});
+  return it;
+}
+function myItems(u){
+  const it=[{l:"個人反思心得",d:essayStatus(u.id)==="submitted"?1:0,t:1}];
+  if(PEER()) it.push({l:"幫各組評分＋理由",d:Math.min(7,peerDone(u.id))+(reasonsDone(u.id)?1:0),t:8,show:`${peerDone(u.id)} / 7 組${reasonsDone(u.id)?"＋理由":""}`});
+  if(u.leader){it.push({l:"上傳本組簡報",d:DB.pdfs[u.group]?1:0,t:1});if(PEER())it.push({l:"送出小組評分",d:DB.finals[u.group]?1:0,t:1})}
+  return it;
+}
+const bar=(p,cls="")=>`<div class="pbar ${cls}"><i style="width:${p}%"></i></div>`;
+function progCard(title,items,sub=""){
+  const p=pctOf(items);
+  return `<div class="card prog"><div class="ph"><div><div class="muted" style="font-size:15px">${title}</div>${sub?`<div class="muted" style="font-size:13px">${sub}</div>`:""}</div><div class="pp ${p===100?"done":""}">${p}<small>%</small></div></div>${bar(p,p===100?"done":"")}
+    <div class="pitems">${items.map(x=>{const q=x.t?Math.round(x.d/x.t*100):0;return `<div class="pit"><span>${q===100?"✅":"⬜"} ${x.l}</span><b>${x.show??(x.t===1?(x.d?"完成":"未完成"):`${x.d} / ${x.t} ${x.u||""}`)}</b>${x.t>1?bar(q,"mini"):""}</div>`}).join("")}</div></div>`;
+}
+function classItems(){
+  const all=DB.students, it=[{l:"個人反思心得",d:all.filter(s=>essayStatus(s.id)==="submitted").length,t:all.length,u:"人"},{l:"小組簡報上傳",d:ALLG.filter(g=>DB.pdfs[g]).length,t:7,u:"組"}];
+  if(PEER()) it.push({l:"個人互評（含理由）",d:all.filter(s=>peerComplete(s.id)).length,t:all.length,u:"人"},{l:"小組評分送出",d:ALLG.filter(g=>DB.finals[g]).length,t:7,u:"組"});
+  return it;
+}
+function teacherProgress(){
+  const rows=ALLG.map(g=>({g,it:groupItems(g)})).map(r=>({...r,p:pctOf(r.it)}));
+  return `<div class="progwrap">${progCard("全班完成度",classItems(),`${DB.students.length} 人、7 組`)}
+    <div class="card" style="padding:0;overflow:auto"><table class="ptable"><thead><tr><th>組別</th><th>完成度</th><th class="num">心得</th><th class="num">簡報</th>${PEER()?'<th class="num">個人互評</th><th class="num">小組評分</th>':""}</tr></thead><tbody>
+    ${rows.map(r=>`<tr><td><b>第 ${r.g} 組</b></td><td style="min-width:150px"><div class="row" style="gap:8px;flex-wrap:nowrap"><div style="flex:1">${bar(r.p,r.p===100?"done":"")}</div><b style="width:44px;text-align:right">${r.p}%</b></div></td>
+      ${r.it.map(x=>`<td class="num">${x.t===1?(x.d?'<span class="pill ok">✓</span>':'<span class="pill no">✗</span>'):`${x.d}/${x.t}`}</td>`).join("")}</tr>`).join("")}</tbody></table></div></div>`;
+}
 function viewTHome(){
   const all=DB.students, miss=all.filter(s=>essayStatus(s.id)!=="submitted"), ug=ungraded();
   const noPdf=ALLG.filter(g=>!DB.pdfs[g]), noFin=ALLG.filter(g=>!DB.finals[g]), ugG=ALLG.filter(g=>!DB.tGroup[g]);
   const dl=new Date(DB.settings.deadline), dlv=`${dl.getFullYear()}-${pad(dl.getMonth()+1)}-${pad(dl.getDate())}T${pad(dl.getHours())}:${pad(dl.getMinutes())}`;
   return `<div class="page-head"><div><h2>老師您好</h2><div class="sub">下面是目前需要留意的事。點按鈕就會直接帶您過去。</div></div><span class="spacer"></span>${countdown()}</div>
+  ${teacherProgress()}
   <div class="dash">
     <div class="card"><div class="muted">待批改的個人作業</div><div class="n">${ug.length} <small>份</small></div>
       <div class="muted" style="margin:6px 0 12px">已繳交 ${all.length-miss.length} 份，已批改 ${all.length-miss.length-ug.length} 份</div>

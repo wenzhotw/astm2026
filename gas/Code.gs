@@ -17,14 +17,15 @@ const TZ = 'Asia/Taipei';
 
 const SH = {
   roster: '學生名單', essays: '個人作業', drafts: '草稿', peer: '個人互評',
-  finals: '小組互評', reports: '小組報告', grades: '老師評分', settings: '設定', history: '互評紀錄'
+  finals: '小組互評', reports: '小組報告', grades: '老師評分', settings: '設定', history: '互評紀錄', reasons: '個人互評理由'
 };
 const HEAD = {
   roster: ['組別', '學號', '姓名', 'Email', '手機', '是否組長'],
   essays: ['學號', '姓名', '組別', '版本', '題目', '內文', '字數', '繳交時間', 'PDF檔案ID', '確認信'],
   drafts: ['學號', '題目', '內文', '更新時間'],
   peer: ['評分人學號', '評分人', '評分人組別', '被評組', '分數', '評語', '更新時間'],
-  finals: ['評分組', '被評組', '分數', '名次', '評語', '整體評語', '送出人', '送出時間'],
+  finals: ['評分組', '被評組', '分數', '名次', '評語', '整體評語', '送出人', '送出時間', '組員平均', '組長調整', '第一名理由', '最後一名理由'],
+  reasons: ['評分人學號', '評分人', '組別', '第一名組', '第一名理由', '最後一名組', '最後一名理由', '更新時間'],
   reports: ['組別', '檔案ID', '檔名', '原始檔名', '頁數', '上傳人', '上傳時間'],
   grades: ['類型', '對象', '分數', '評語', '更新時間'],
   settings: ['項目', '值', '說明'],
@@ -41,7 +42,8 @@ const DEFAULT_SETTINGS = [
   ['檔案資料夾ID', '', '初始化時自動建立'],
   ['目前互評次數', '2', '第幾次組間互評。老師在後台按「結束這次互評」時會自動加 1；第 1 次的結果已內建在網頁裡'],
   ['全學期互評次數', '3', ''],
-  ['老師通知信箱', '', '七組都上傳簡報、七組都送出互評時，自動寄信到這裡（多個用逗號隔開）。可在網頁後台修改']
+  ['老師通知信箱', '', '七組都上傳簡報、七組都送出互評時，自動寄信到這裡（多個用逗號隔開）。可在網頁後台修改'],
+  ['老師專用連結金鑰', '', '老師專用連結（免登入進後台）用的金鑰，初始化時自動產生。清空後再跑一次初始化，或在後台按「重新產生」，舊連結就會失效']
 ];
 
 // ================= 網頁入口 =================
@@ -61,6 +63,7 @@ function onOpen() {
     .addItem('開啟自動提醒排程', 'installReminderTrigger')
     .addItem('關閉自動提醒排程', 'removeReminderTrigger')
     .addItem('寄一封測試信給自己', 'sendTestMail')
+    .addItem('顯示老師專用連結', 'showTeacherLink')
     .addToUi();
 }
 
@@ -73,6 +76,10 @@ function setup() {
     if (sh.getLastRow() === 0) {
       sh.getRange(1, 1, 1, HEAD[k].length).setValues([HEAD[k]]).setFontWeight('bold').setBackground('#e3efec');
       sh.setFrozenRows(1);
+    } else { // 舊版的分頁：在表頭最後補上新欄位，原有資料不動
+      const have = sh.getRange(1, 1, 1, Math.max(1, sh.getLastColumn())).getValues()[0].map(String);
+      const add = HEAD[k].filter(h => have.indexOf(h) < 0);
+      if (add.length) sh.getRange(1, have.filter(String).length + 1, 1, add.length).setValues([add]).setFontWeight('bold').setBackground('#e3efec');
     }
   });
   // 學號、手機欄設成純文字，避免開頭的 0 被吃掉
@@ -83,6 +90,7 @@ function setup() {
   const have = st.getLastRow() > 1 ? st.getRange(2, 1, st.getLastRow() - 1, 1).getValues().map(r => r[0]) : [];
   DEFAULT_SETTINGS.forEach(r => { if (have.indexOf(r[0]) < 0) st.appendRow(r); });
   st.getRange('B:B').setNumberFormat('@');
+  if (!getSetting_('老師專用連結金鑰')) setSetting_('老師專用連結金鑰', newKey_());
   // 雲端資料夾
   let folderId = getSetting_('檔案資料夾ID');
   if (!folderId) {
@@ -120,7 +128,7 @@ function checkRoster() {
 // ================= 前端呼叫入口 =================
 function api(fn, token, p) {
   try {
-    const PUBLIC = { publicInfo: 1, login: 1, teacherLogin: 1 };
+    const PUBLIC = { publicInfo: 1, login: 1, teacherLogin: 1, teacherKey: 1 };
     let sess = null;
     if (!PUBLIC[fn]) {
       sess = getSession_(token);
@@ -156,6 +164,35 @@ const H = {
     if (getSetting_('老師密碼') === DEFAULT_SETTINGS[4][1]) return { error: '請先到試算表的「設定」分頁改老師密碼' };
     const sess = { role: 'teacher' };
     return { token: newSession_(sess), user: { teacher: true }, snapshot: snapshot_(sess) };
+  },
+
+  teacherKey(p) {
+    const key = getSetting_('老師專用連結金鑰');
+    if (!key || String(p.key || '') !== key) return { error: '老師專用連結已失效' };
+    const sess = { role: 'teacher' };
+    return { token: newSession_(sess), user: { teacher: true }, snapshot: snapshot_(sess) };
+  },
+
+  regenTeacherKey(p, sess) {
+    teacher_(sess);
+    setSetting_('老師專用連結金鑰', newKey_());
+    return { ok: true, snapshot: snapshot_(sess) };
+  },
+
+  // 個人評分的最後一步：第一名、最後一名的理由
+  saveReasons(p, sess) {
+    const s = student_(sess);
+    if (!settings_().peerOn) return { error: '老師目前沒有開放組間互評' };
+    const b = p.best || {}, w = p.worst || {}, bg = Number(b.g), wg = Number(w.g);
+    if (GROUPS.indexOf(bg) < 0 || GROUPS.indexOf(wg) < 0 || bg === wg) return { error: '第一名和最後一名要是兩個不同的組' };
+    if (!String(b.text || '').trim() || !String(w.text || '').trim()) return { error: '兩個理由都要寫' };
+    return withLock_(() => {
+      const sh = sheet_(SH.reasons) || makeSheet_('reasons');
+      const vals = [[s.id, s.name, s.group, bg, String(b.text).trim(), wg, String(w.text).trim(), new Date()]];
+      const r = findRow_(sh, row => String(row[0]) === s.id);
+      if (r) sh.getRange(r, 1, 1, 8).setValues(vals); else sh.appendRow(vals[0]);
+      return { ok: true };
+    });
   },
 
   refresh(p, sess) { return { snapshot: snapshot_(sess), user: sess.role === 'teacher' ? { teacher: true } : publicStudent_(student_(sess), true) }; },
@@ -240,12 +277,15 @@ const H = {
     const ranks = GROUPS.map(g => Number(p.ranks[g])).sort((a, b) => a - b).join(',');
     if (ranks !== GROUPS.join(',')) return { error: '名次要剛好是第 1 到第 7 名，不能重複' };
     for (const g of GROUPS) { const v = Number(p.scores[g]); if (!(v >= 0 && v <= 100)) return { error: `第 ${g} 組的分數要在 0 到 100 之間` }; }
+    if (!String(p.best || '').trim() || !String(p.worst || '').trim()) return { error: '請寫下第一名和最後一名的理由' };
     return withLock_(() => {
       const sh = sheet_(SH.finals);
       for (let r = sh.getLastRow(); r >= 2; r--) if (Number(sh.getRange(r, 1).getValue()) === s.group) sh.deleteRow(r);
       const now = new Date();
       GROUPS.forEach(g => sh.appendRow([s.group, g, Math.round(Number(p.scores[g])), Number(p.ranks[g]),
-        String((p.comments || {})[g] || ''), String(p.overall || ''), s.name, now]));
+        String((p.comments || {})[g] || ''), String(p.overall || ''), s.name, now,
+        p.avg && p.avg[g] != null ? Number(p.avg[g]) : '', p.adj && p.adj[g] != null ? Number(p.adj[g]) : '',
+        String(p.best || '').trim(), String(p.worst || '').trim()]));
       notifyTeacher_('finals');
       return { ok: true, snapshot: snapshot_(sess) };
     });
@@ -317,12 +357,12 @@ H.endRound = function (p, sess) {
     const R = finalsResult_();
     let hs = sheet_(SH.history);
     if (!hs) { hs = SpreadsheetApp.getActiveSpreadsheet().insertSheet(SH.history); hs.appendRow(HEAD.history); hs.setFrozenRows(1); }
-    hs.appendRow([cur, `第 ${cur} 次小組作業互評`, JSON.stringify({ ranks: R.ranks, scores: R.scores, comments: R.comments, overall: R.overall, at: R.at }), new Date()]);
+    hs.appendRow([cur, `第 ${cur} 次小組作業互評`, JSON.stringify({ ranks: R.ranks, scores: R.scores, comments: R.comments, overall: R.overall, best: R.best, worst: R.worst, at: R.at }), new Date()]);
     const clear = name => { const sh = sheet_(name); for (let r = sh.getLastRow(); r >= 2; r--) sh.deleteRow(r); };
     rows_(SH.reports).forEach(r => {
       try { const f = DriveApp.getFileById(String(r['檔案ID'])); f.setName(`第${cur}次_第${r['組別']}組_簡報.pdf`); f.moveTo(subFolder_('小組報告舊版')); } catch (e) { console.error(e); }
     });
-    clear(SH.peer); clear(SH.finals); clear(SH.reports);
+    clear(SH.peer); clear(SH.finals); clear(SH.reports); if (sheet_(SH.reasons)) clear(SH.reasons);
     setSetting_('目前互評次數', String(cur + 1));
     return { ok: true, snapshot: snapshot_(sess) };
   });
@@ -353,10 +393,15 @@ function snapshot_(sess) {
   rows_(SH.reports).forEach(r => {
     snap.pdfs[Number(r['組別'])] = { kind: 'pdf', name: String(r['檔名']), orig: String(r['原始檔名']), pages: Number(r['頁數']) || null, at: ms_(r['上傳時間']), remote: true };
   });
-  // 獨立評分：全組每個人都評完七組之前，學員只拿得到自己的互評
-  const peerRows = rows_(SH.peer), cnt = {};
+  // 獨立評分：全組每個人（包括組長）都完成個人評分（七組分數＋第一名、最後一名理由）之前，學員只拿得到自己的
+  const peerRows = rows_(SH.peer), cnt = {}, reasonRows = rows_(SH.reasons), rsn = {};
   peerRows.forEach(r => { const id = String(r['評分人學號']); (cnt[id] = cnt[id] || {})[Number(r['被評組'])] = 1; });
-  const groupDone = !isT && R.filter(x => x.group === me.group).every(x => Object.keys(cnt[x.id] || {}).length === GROUPS.length);
+  reasonRows.forEach(r => { rsn[String(r['評分人學號'])] = { best: { g: Number(r['第一名組']), text: String(r['第一名理由'] || '') }, worst: { g: Number(r['最後一名組']), text: String(r['最後一名理由'] || '') } }; });
+  const complete = id => Object.keys(cnt[id] || {}).length === GROUPS.length && !!(rsn[id] && rsn[id].best.text && rsn[id].worst.text);
+  const groupDone = !isT && R.filter(x => x.group === me.group).every(x => complete(x.id));
+  snap.reasons = {}; snap.peerStatus = {};
+  Object.keys(rsn).forEach(id => { if (isT || id === me.id || (groupDone && sameGroup(id))) snap.reasons[id] = rsn[id]; });
+  if (!isT) R.filter(x => x.group === me.group).forEach(x => { snap.peerStatus[x.id] = complete(x.id); });
   peerRows.forEach(r => {
     const id = String(r['評分人學號']);
     if (!isT && id !== me.id && !(groupDone && sameGroup(id))) return;
@@ -365,9 +410,11 @@ function snapshot_(sess) {
   rows_(SH.finals).forEach(r => {
     const g = Number(r['評分組']);
     if (!isT && g !== me.group) return;
-    const f = snap.finals[g] = snap.finals[g] || { scores: {}, ranks: {}, comments: {}, overall: String(r['整體評語'] || ''), at: ms_(r['送出時間']) };
+    const f = snap.finals[g] = snap.finals[g] || { scores: {}, ranks: {}, comments: {}, avg: {}, adj: {}, overall: String(r['整體評語'] || ''), best: String(r['第一名理由'] || ''), worst: String(r['最後一名理由'] || ''), at: ms_(r['送出時間']) };
     const t = Number(r['被評組']);
     f.scores[t] = Number(r['分數']); f.ranks[t] = Number(r['名次']);
+    if (r['組員平均'] !== '' && r['組員平均'] != null) f.avg[t] = Number(r['組員平均']);
+    if (r['組長調整'] !== '' && r['組長調整'] != null) f.adj[t] = Number(r['組長調整']);
     if (r['評語']) f.comments[t] = String(r['評語']);
   });
   if (isT) rows_(SH.grades).forEach(r => {
@@ -461,7 +508,18 @@ function settings_() {
   return { deadline, peerOn: getSetting_('組間互評') !== '關', remindOn: getSetting_('自動提醒信') !== '關',
     peerRound: Number(getSetting_('目前互評次數')) || 2, peerRounds: Number(getSetting_('全學期互評次數')) || 3 };
 }
-function publicSettings_(isT) { const o = settings_(); if (isT) o.notifyEmail = getSetting_('老師通知信箱'); return o; }
+function publicSettings_(isT) {
+  const o = settings_();
+  if (isT) { o.notifyEmail = getSetting_('老師通知信箱'); const k = getSetting_('老師專用連結金鑰'); o.teacherLink = k ? ScriptApp.getService().getUrl() + '?k=' + k : ''; }
+  return o;
+}
+function newKey_() { return Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '').slice(0, 8); }
+function makeSheet_(k) { const sh = SpreadsheetApp.getActiveSpreadsheet().insertSheet(SH[k]); sh.appendRow(HEAD[k]); sh.setFrozenRows(1); return sh; }
+// 試算表選單：顯示老師專用連結
+function showTeacherLink() {
+  if (!getSetting_('老師專用連結金鑰')) setSetting_('老師專用連結金鑰', newKey_());
+  safeAlert_('老師專用連結（只傳給老師本人）：\n\n' + ScriptApp.getService().getUrl() + '?k=' + getSetting_('老師專用連結金鑰') + '\n\n要讓舊連結失效：在「設定」分頁清空「老師專用連結金鑰」再按一次這個選單。');
+}
 // 已結束的互評（只有小組層級：名次、分數、評語），每個人都能看
 function history_() {
   const h = {};
@@ -469,13 +527,14 @@ function history_() {
   return h;
 }
 function finalsResult_() {
-  const R = { ranks: {}, scores: {}, comments: {}, overall: {}, at: {} };
+  const R = { ranks: {}, scores: {}, comments: {}, overall: {}, best: {}, worst: {}, at: {} };
   rows_(SH.finals).forEach(r => {
     const g = Number(r['評分組']), t = Number(r['被評組']);
     (R.ranks[g] = R.ranks[g] || {})[t] = Number(r['名次']);
     (R.scores[g] = R.scores[g] || {})[t] = Number(r['分數']);
     if (r['評語']) (R.comments[g] = R.comments[g] || {})[t] = String(r['評語']);
     R.overall[g] = String(r['整體評語'] || ''); R.at[g] = ms_(r['送出時間']);
+    R.best[g] = String(r['第一名理由'] || ''); R.worst[g] = String(r['最後一名理由'] || '');
   });
   return R;
 }

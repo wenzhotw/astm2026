@@ -426,6 +426,8 @@ function loadSampleData(){
 function demoReasons(id){const p=DB.peer[id]||{},gs=Object.keys(p).map(Number);if(gs.length<7)return;
   const o=gs.sort((a,b)=>p[b].score-p[a].score||a-b);
   DB.reasons[id]={best:{g:o[0],text:"架構清楚，案例分析扎實，結論有具體行動。"},worst:{g:o[6],text:"重點不夠聚焦，資料來源可以再補強。"}}}
+// 老師專用連結：正式版由後端產生（網址＋?k=金鑰），展示版是 #teacher
+const teacherLink=()=>BACKEND?(DB.settings.teacherLink||""):location.href.split("#")[0]+"#teacher";
 // 展示模式的三種體驗身分：組員、組長、老師
 const DEMO_ESSAY=["參加第一次領袖營之前，我以為策略和人才是兩件分開的事：策略由高層制定，人才由人資部門負責招募與培訓。三天的課程讓我徹底改變這個想法。老師在課堂上反覆強調，策略能不能落地，取決於有沒有對的人在對的位置上，而人才能不能發揮，也取決於策略是否給了他清楚的方向。這兩者其實是一體兩面。", "課程中最讓我印象深刻的是 Netflix 的案例。Netflix 用極高的自由度換取員工的高度責任感，並且願意用優渥的資遣方案，讓不再適合的人離開。一開始我覺得這種做法太過冷酷，但在小組討論後，我發現它背後是一套非常一致的邏輯：公司要的是能在快速變動的市場中自己做判斷的人，所以它的制度設計全部圍繞著這個目標。真正讓我反思的，不是要不要學 Netflix，而是我們自己的組織有沒有這樣一致的邏輯。", "課堂上老師也提醒我們，看案例時要分清楚當時的決策條件和事後的觀點。很多決策事後看來理所當然，但在當下資訊有限、壓力很大的情況下，能做出判斷本身就很不容易。這讓我學會用更謙虛的態度看待別人的決定。", "對照華為的案例，我看到另一種截然不同的路徑。華為透過嚴格的考核、輪調與內部培養，建立了一支高度凝聚的隊伍。兩家公司的做法看似相反，但都清楚回答了同一個問題：我們需要什麼樣的人，以及如何讓這些人持續成長。這讓我理解到，人才管理沒有標準答案，關鍵在於制度與策略之間是否相互呼應。", "小組合作的過程也是很好的學習。我們組員來自金融、製造、醫療與科技等不同產業，一開始對案例的解讀差異很大，討論常常卡住。後來我們決定先各自整理自己產業的觀察，再一起比對，才發現彼此的經驗其實可以互補。這個過程讓我體會到，帶領團隊不是讓大家想法一致，而是讓不同的觀點被聽見，並找到共同的方向。", "另一個收穫來自老師對「讀人」的提醒。過去我評估同事，多半看他的工作成果和專業能力，很少去理解他的動機、擅長的工作方式，以及他希望在組織中扮演什麼角色。課程中的練習讓我發現，同樣的任務交給不同的人，結果可能完全不同；領導者如果不了解自己的團隊，就很難把人放在最能發揮的位置。", "回到自己的工作，我開始重新檢視部門的人才安排。過去我習慣把最重要的專案交給最資深的同事，認為這樣最穩妥，卻忽略了年輕同事的成長需求，也讓資深同事負荷過重。課後我嘗試調整分工，讓兩位年輕同事分別主導一個小型專案，由資深同事擔任顧問。雖然一開始進度慢了一些，但團隊的投入感明顯提升，我也看到他們在過程中展現出原本沒有機會發揮的能力。", "我也開始反省自己的溝通方式。以前開會時，我常常急著提出解決方案，希望盡快做出決定。現在我會刻意先請每位同事說說他們的看法，再一起歸納出方向。雖然會議時間變長了一點，但大家對決定的認同度提高，後續執行也順利許多。", "老師提到，領導者最重要的工作之一，是為組織培養下一代的領導者。這句話對我衝擊很大。我發現自己過去花了太多時間在處理眼前的問題，卻很少思考三年、五年後，團隊需要什麼樣的人才，以及我現在可以做些什麼來準備。接下來我希望為每位同事建立更清楚的發展方向，定期和他們討論職涯規劃，而不是只在年度考核時才談。", "這次領袖營讓我學到最重要的一件事，是用系統的眼光看待人才。策略、組織、制度與文化必須環環相扣，任何一個環節脫節，都會讓好的策略無法執行，讓好的人才流失。我期待在第二次領袖營中，進一步學習如何把這些觀念轉化為具體可行的管理工具，帶回組織中實踐。"];
 function demoScenario(kind){
@@ -540,7 +542,7 @@ async function call(fn,payload,{busyMsg,quiet}={}){
 }
 function applySnap(sn){
   if(sn.students){DB.students=sn.students}
-  for(const k of ["versions","drafts","pdfs","peer","reasons","finals","tEssay","tGroup"]) if(sn[k]) DB[k]=sn[k];
+  for(const k of ["versions","drafts","pdfs","peer","reasons","peerStatus","finals","tEssay","tGroup"]) if(sn[k]) DB[k]=sn[k];
   if(sn.settings) Object.assign(DB.settings,sn.settings);
   if(sn.brief) BRIEF=sn.brief;
   if(sn.history) Object.assign(DB.history,sn.history);
@@ -1092,7 +1094,7 @@ function memberMatrix(g,{hiId=null,clickable=false}={}){
     <tr class="avg"><td>組內平均</td>${ALLG.map(t=>`<td class="num">${avgFor(g,t)??"—"}</td>`).join("")}</tr></tbody></table></div>`;
 }
 function finalTable(f){
-  const order=[...ALLG].sort((a,b)=>f.ranks[a]-f.ranks[b]), c=f.comments||{}, hasAdj=!!f.adj;
+  const order=[...ALLG].sort((a,b)=>f.ranks[a]-f.ranks[b]), c=f.comments||{}, hasAdj=!!f.adj&&Object.keys(f.adj).length>0;
   const sign=v=>v>0?`＋${v}`:v<0?`−${-v}`:"0";
   return `<div class="card" style="padding:0;overflow:auto"><table><thead><tr><th style="white-space:nowrap">名次</th><th>組別</th>${hasAdj?'<th class="num">組員平均</th><th class="num">組長調整</th>':""}<th class="num">分數</th><th>評語</th></tr></thead><tbody>
   ${order.map(t=>`<tr><td style="white-space:nowrap"><b>第 ${f.ranks[t]} 名</b></td><td>第 ${t} 組${TOPICS[t-1]?"｜"+TOPICS[t-1]:""}</td>${hasAdj?`<td class="num">${f.avg?.[t]??"—"}</td><td class="num">${sign(+f.adj[t]||0)}</td>`:""}<td class="num"><b>${f.scores[t]}</b></td><td>${c[t]?esc(c[t]):'<span class="muted">—</span>'}</td></tr>`).join("")}</tbody></table>
@@ -1469,6 +1471,10 @@ function viewTSettings(){
     <div class="muted" style="font-size:15px;margin:6px 0 12px">學員和組長的互評頁面都會標示「第 ${PR()} 次互評」。結束這一次時，系統會把各組送出的小組評分封存成結果，個人評分不保留，接著清空資料開始下一次。${Object.keys(DB.history).map(n=>`第 ${n} 次`).join("、")}已經結束，可以在「互評結果」查看。</div>
     <button class="btn" id="nextRound" ${PR()>=PEER_ROUNDS?"disabled":""}>結束第 ${PR()} 次互評，開始第 ${PR()+1} 次</button>
   </div>
+  <div class="card" style="margin-bottom:18px"><h3>🔑 老師專用連結</h3>
+    <div class="muted" style="font-size:15px;margin-bottom:10px">點這個連結就直接進入老師後台，不用輸入帳號密碼。<b style="color:var(--warn)">它等於老師的密碼，只傳給老師本人，不要貼到群組。</b>萬一外流，按「重新產生」舊連結就會失效。</div>
+    <div class="row"><input id="tLink" readonly value="${esc(teacherLink())}" style="flex:1;min-width:240px;font-size:15px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--soft)"><button class="btn primary" id="cpTLink">📋 複製</button>${BACKEND?`<button class="btn" id="regenTLink">重新產生</button>`:""}</div>
+  </div>
   <div class="card" style="margin-bottom:18px"><h3>📬 自動通知老師</h3>
     <div class="muted" style="font-size:15px;margin-bottom:10px">七組都上傳簡報時，寄出簡報的雲端資料夾連結；七組都送出小組互評時，寄出互評結果。每一次互評各寄一次。${BACKEND?"":"（展示模式不會真的寄信）"}</div>
     <div class="row"><input id="notifyEmail" type="email" placeholder="老師的 Email，多個用逗號隔開" value="${esc(DB.settings.notifyEmail||"")}" style="flex:1;min-width:240px;font-size:17px;padding:10px 12px;border:1px solid var(--line);border-radius:10px"><button class="btn primary" id="saveNotify">儲存</button></div>
@@ -1498,6 +1504,9 @@ function viewTSettings(){
 function bindTSettings(){
   $("#dlSave").onclick=()=>{const v=new Date($("#dlIn").value).getTime();if(!v){toast("時間格式不正確");return}if(BACKEND){call("saveSettings",{deadline:v},{busyMsg:"儲存中…"}).then(()=>{toast(`截止時間已改為 ${fmtDue(v)}`);render()}).catch(()=>{});return}DB.settings.deadline=v;toast(`截止時間已改為 ${fmtDue(v)}`);render()};
   if($("#remindOn")) $("#remindOn").onchange=e=>{const on=e.target.checked;call("saveSettings",{remindOn:on},{busyMsg:"儲存中…"}).then(()=>{toast(on?"已開啟自動提醒信":"已關閉自動提醒信");render()}).catch(()=>{e.target.checked=!on})};
+  $("#cpTLink").onclick=async()=>{const v=$("#tLink").value;try{await navigator.clipboard.writeText(v);toast("已複製老師專用連結")}catch(e){$("#tLink").select();toast("請按 Ctrl＋C 複製")}};
+  if($("#regenTLink")) $("#regenTLink").onclick=async()=>{const ok=await dialog({title:"重新產生老師專用連結？",body:"舊的連結會馬上失效，要把新連結再傳給老師一次。",buttons:[{l:"取消",v:false},{l:"重新產生",v:true,primary:true}]});if(!ok)return;
+    try{await call("regenTeacherKey",{},{busyMsg:"產生中…"});toast("已產生新連結，舊連結已失效");render()}catch(e){}};
   $("#saveNotify").onclick=async()=>{const v=$("#notifyEmail").value.trim();
     if(v&&!v.split(/[,，\s]+/).filter(Boolean).every(x=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x))){toast("Email 格式不對");return}
     if(BACKEND){try{await call("saveSettings",{notifyEmail:v},{busyMsg:"儲存中…"})}catch(e){return}} else DB.settings.notifyEmail=v;
@@ -1784,9 +1793,17 @@ if(BACKEND){
   DB.students=[]; DB.settings.remindOn=true;
   $("#app").innerHTML='<div class="login-wrap"><div class="card" style="text-align:center"><b>載入中…</b></div></div>';
   let tok=null; try{tok=sessionStorage.getItem("astmTok")}catch(e){}
+  // 老師專用連結：網址帶 ?k=金鑰，就直接以老師身分登入
+  const urlKey=()=>new Promise(res=>{try{google.script.url.getLocation(l=>res(l&&l.parameter&&l.parameter.k||""))}catch(e){res("")}});
+  urlKey().then(k=>!k?null:api("teacherKey",{key:k}).then(r=>{S.token=r.token;try{sessionStorage.setItem("astmTok",r.token)}catch(e){}applySnap(r.snapshot);S.user={teacher:true};S.tab="home";lastRefresh=Date.now();render();toast("已用老師專用連結登入");return true}).catch(e=>{toast("老師專用連結已失效，請用帳號密碼登入");return null}))
+  .then(done=>{ if(done) return;
   (tok?(S.token=tok,api("refresh").then(r=>{applySnap(r.snapshot);S.user=r.user;S.tab="home";lastRefresh=Date.now();render()}).catch(()=>{S.token=null;return api("publicInfo").then(r=>{applySnap(r.snapshot);render()})}))
      :api("publicInfo").then(r=>{applySnap(r.snapshot);render()})).catch(e=>{$("#app").innerHTML=`<div class="login-wrap"><div class="card"><b>系統暫時無法使用</b><div class="muted">${esc(e.message)}</div></div></div>`});
-}else render();
+  });
+}else{
+  // 展示版的老師示範連結：網址最後加 #teacher
+  if(location.hash==="#teacher"&&CONFIG.demo){render();demoLogin("teacher");go("home")} else render();
+}
 </script>
 </body>
 </html>

@@ -54,7 +54,7 @@ await page.addInitScript(() => {
     if (k === "withFailureHandler") return fn => mk(s, fn);
     return (...a) => { setTimeout(() => window.__gas(k, JSON.stringify(a)).then(r => s && s(JSON.parse(r))).catch(e => f && f(e)), 30); };
   } });
-  window.google = { script: { run: mk(null, null) } };
+  window.google = { script: { run: mk(null, null), url: { getLocation: cb => cb({ parameter: Object.fromEntries(new URLSearchParams(location.search)) }) } } };
 });
 await page.goto(pathToFileURL(path.resolve("gas/index.html")).href);
 await page.waitForSelector("[data-cdh]");
@@ -114,21 +114,32 @@ ok(rowsOf("個人互評").some(r => String(r[0]) === "114900001" && r[4] === 88)
   const mem = csv.filter(r => +r[0] === 1);
   for (const m of mem) { const tk = ctx.api("login", null, { id: m[1], pw: m[4] }).token; for (const g of [1, 2, 3, 4, 5, 6, 7]) ctx.api("savePeer", tk, { g, score: 80 + g, comment: "" }); }
   const sn2 = ctx.api("refresh", t1, {}).snapshot;
-  ok(mem.every(m => Object.keys(sn2.peer[m[1]] || {}).length === 7), "全組都評完後，才看得到全組的互評");
+  ok(!sn2.peer["114900003"] && sn2.peerStatus["114900003"] === false, "七組都評了但還沒寫理由，組長仍看不到（完成狀態是「未完成」）");
+  ok(ctx.api("saveReasons", t3, { best: { g: 7, text: "" }, worst: { g: 1, text: "x" } }).error, "理由沒寫會被擋下");
+  for (const m of mem) { const tk = ctx.api("login", null, { id: m[1], pw: m[4] }).token; ok(ctx.api("saveReasons", tk, { best: { g: 7, text: m[2] + "的第一名理由" }, worst: { g: 1, text: "最後一名理由" } }).ok, `${m[2]} 寫好第一名、最後一名理由`); }
+  const sn3 = ctx.api("refresh", t1, {}).snapshot;
+  ok(mem.every(m => Object.keys(sn3.peer[m[1]] || {}).length === 7 && sn3.reasons[m[1]].best.g === 7 && sn3.peerStatus[m[1]] === true), "全組都完成個人評分後，才看得到全組的分數與理由");
+  const t9 = ctx.api("login", null, { id: "114900007", pw: "0900000007" }).token;
+  ok(!ctx.api("refresh", t9, {}).snapshot.reasons["114900002"], "別組的人看不到這組的理由");
 }
-await page.click('[data-tab="gsubmit"]'); await page.waitForSelector("#rankList");
-for (const g of [1, 2, 3, 4, 5, 6, 7]) { await page.fill(`[data-rs="${g}"]`, String(70 + g)); }
-await page.click("#autoRank"); await page.fill("#overall", "大家都很認真");
+await page.reload(); await page.waitForSelector(".who");
+await page.click('[data-tab="gsubmit"]'); await page.waitForSelector("#submitFinal");
+await page.fill('[data-adj-t="1"]', "5"); await page.dispatchEvent('[data-adj-t="1"]', "input");
+await page.fill("#bestR", "第七組最完整"); await page.dispatchEvent("#bestR", "input");
+await page.fill("#worstR", "第一組要再聚焦"); await page.dispatchEvent("#worstR", "input");
+await page.fill("#overall", "大家都很認真"); await page.dispatchEvent("#overall", "input");
 await page.click("#submitFinal"); await page.waitForSelector('[data-dv="1"]'); await page.click('[data-dv="1"]');
 await page.waitForFunction(() => document.querySelector(".tab.on")?.textContent.includes("首頁"));
 const fr = rowsOf("小組互評");
-ok(fr.length === 7 && fr.find(r => r[1] === 7)[3] === 1 && fr[0][5] === "大家都很認真", "小組評分寫進試算表（7 列、第 7 組第 1 名、整體評語）");
+const r1 = fr.find(r => r[1] === 1), r7 = fr.find(r => r[1] === 7);
+ok(fr.length === 7 && r7[3] === 1 && fr[0][5] === "大家都很認真", "小組評分寫進試算表（7 列、第 7 組第 1 名、整體評語）");
+ok(r1[8] === 81 && r1[9] === 5 && r1[2] === 86 && r1[10] === "第七組最完整" && r1[11] === "第一組要再聚焦", "組員平均、組長調整、調整後分數與第一名、最後一名理由都存進試算表");
 ok(!mails.some(m => m.to === "prof@example.com" && m.subject.includes("互評")), "還沒七組都送出前，不寄互評結果");
 for (const g of [2, 3, 4, 5, 6, 7]) {
   const leader = csv.find(r => +r[0] === g && r[5] === "是");
   const t = ctx.api("login", null, { id: leader[1], pw: leader[4] }).token;
   const scores = {}, ranks = {}; [1, 2, 3, 4, 5, 6, 7].forEach((x, i) => { scores[x] = 90 - i; ranks[x] = ((x + g) % 7) + 1; });
-  ok(ctx.api("submitFinal", t, { scores, ranks, comments: {}, overall: "" }).ok, `第 ${g} 組送出小組評分`);
+  ok(ctx.api("submitFinal", t, { scores, ranks, comments: {}, overall: "", best: "好", worst: "再加油" }).ok, `第 ${g} 組送出小組評分`);
 }
 { const m = mails.filter(m => m.to === "prof@example.com" && m.subject.includes("互評"));
   ok(m.length === 1 && m[0].htmlBody.includes("第 1 名"), "七組都送出後，自動寄互評結果給老師（只寄一次）"); }
@@ -158,6 +169,29 @@ const sent = mails.length - before;
 ok(sent === 41, `截止前三天寄提醒信給沒交的人（${sent} 封，已交的 1 人不寄）`);
 ctx.sendReminders();
 ok(mails.length - before === 41, "同一天不重複寄");
+
+// 老師專用連結
+{ const key = st.data.find(r => r[0] === "老師專用連結金鑰")[1];
+  ok(key && key.length >= 32, "初始化自動產生老師專用連結金鑰");
+  ok(ctx.api("teacherKey", null, { key: "wrong" }).error, "錯的金鑰不能登入");
+  const r = ctx.api("teacherKey", null, { key });
+  ok(r.token && r.snapshot.settings.teacherLink.endsWith("?k=" + key), "老師專用連結可以直接登入，後台看得到連結");
+  ok(ctx.api("regenTeacherKey", r.token, {}).ok && ctx.api("teacherKey", null, { key }).error, "重新產生後，舊連結失效");
+  const t2 = ctx.api("login", null, { id: "114900002", pw: "0900000002" }).token;
+  ok(!ctx.api("refresh", t2, {}).snapshot.settings.teacherLink, "學員拿不到老師專用連結"); }
+{ const key = st.data.find(r => r[0] === "老師專用連結金鑰")[1];
+  await page.evaluate(() => sessionStorage.clear());
+  await page.goto(pathToFileURL(path.resolve("gas/index.html")).href + "?k=" + key);
+  await page.waitForSelector('[data-tab="t-settings"]', { timeout: 15000 });
+  ok(await page.isVisible('[data-tab="t-grade"]'), "點老師專用連結，網頁直接進入老師後台");
+  await page.click('[data-tab="t-settings"]'); await page.waitForSelector("#tLink");
+  ok((await page.inputValue("#tLink")).includes("?k=" + key), "系統設定顯示老師專用連結"); }
+{ // 舊版試算表：表頭會補上新欄位、補產生金鑰
+  const G2 = createGas(path.resolve("gas/Code.gs")); G2.ctx.setup();
+  const f = G2.sheets.get("小組互評"); f.data[0] = f.data[0].slice(0, 8);
+  const s2 = G2.sheets.get("設定"); s2.data = s2.data.filter(r => r[0] !== "老師專用連結金鑰");
+  G2.ctx.setup();
+  ok(f.data[0].length === 12 && f.data[0][11] === "最後一名理由" && s2.data.some(r => r[0] === "老師專用連結金鑰" && r[1]), "舊版試算表再跑一次初始化，會補上新欄位和金鑰"); }
 
 // 結束第 2 次互評
 { const tt = ctx.api("teacherLogin", null, { id: "teacher", pw: "pw5678" }).token;

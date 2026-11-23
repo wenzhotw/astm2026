@@ -513,8 +513,11 @@ const peerDone=id=>Object.keys(DB.peer[id]||{}).length;
 // 獨立評分：全組每個人都評完七組之前，看不到其他組員的分數和評語（老師除外）
 const reasonsDone=id=>!!(DB.reasons[id]?.best?.text&&DB.reasons[id]?.worst?.text);
 const peerComplete=id=>peerDone(id)===7&&reasonsDone(id);
+// 正式版學員在全組評完前拿不到組員的互評內容（獨立評分），所以組員的進度改看後端給的 peerStatus（是否評完）和 peerCount（評了幾組，只有數字）
+const memberPeerDone=id=>id===S.user?.id?peerComplete(id):(DB.peerStatus?.[id]??peerComplete(id));
+const memberPeerCount=id=>id===S.user?.id?peerDone(id):(DB.peerCount?.[id]??peerDone(id));
 const peerOpen=g=>S.user?.teacher||groupMembers(g).every(s=>peerComplete(s.id));
-const peerWaiting=g=>groupMembers(g).filter(s=>!peerComplete(s.id));
+const peerWaiting=g=>groupMembers(g).filter(s=>!memberPeerDone(s.id));
 const memberReasons=g=>peerOpen(g)?Object.fromEntries(groupMembers(g).map(s=>[s.id,DB.reasons[s.id]])):{};
 function lockedNote(g){const w=peerWaiting(g);return `<div class="card empty"><div style="font-size:40px">🔒</div><b>全組評完後才會公開</b>為了讓每個人獨立評分，要等全組 ${groupMembers(g).length} 人都完成個人評分（七組分數＋第一名、最後一名理由），才看得到組員的分數和評語。<div style="margin-top:8px">還沒評完：${w.map(s=>esc(s.name)+(s.id===S.user?.id?"（你）":"")).join("、")}</div></div>`}
 function avgFor(g,t){if(!peerOpen(g))return null;const v=groupMembers(g).map(s=>DB.peer[s.id]?.[t]?.score).filter(x=>x!=null);return v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length*10)/10:null}
@@ -542,7 +545,7 @@ async function call(fn,payload,{busyMsg,quiet}={}){
 }
 function applySnap(sn){
   if(sn.students){DB.students=sn.students}
-  for(const k of ["versions","drafts","pdfs","peer","reasons","peerStatus","finals","tEssay","tGroup"]) if(sn[k]) DB[k]=sn[k];
+  for(const k of ["versions","drafts","pdfs","peer","reasons","peerStatus","peerCount","finals","tEssay","tGroup"]) if(sn[k]) DB[k]=sn[k];
   if(sn.settings) Object.assign(DB.settings,sn.settings);
   if(sn.brief) BRIEF=sn.brief;
   if(sn.history) Object.assign(DB.history,sn.history);
@@ -835,7 +838,7 @@ function bindPublic(){
 /* ================= 學生：首頁 ================= */
 function viewHome(){
   const u=S.user, st=essayStatus(u.id), e=DB.essays[u.id], pd=peerDone(u.id), fin=DB.finals[u.group];
-  const mem=groupMembers(u.group), memDone=mem.filter(s=>peerComplete(s.id)).length;
+  const mem=groupMembers(u.group), memDone=mem.filter(s=>memberPeerDone(s.id)).length;
   const T=[];
   T.push({cls:st==="submitted"?"done":"",t:"我的個人作業",
     d:st==="submitted"?`已繳交第 ${e.v} 版（${fmtTime(e.at)}）${isLate(e.at)?"，遲交":""}。要修改可以再交一次。`:st==="draft"?"已經寫了一部分，記得按繳交。":"還沒開始寫。直接在系統打字，會自動排版成 A4。",
@@ -1102,7 +1105,7 @@ function finalTable(f){
   <div style="padding:14px 16px;border-top:1px solid var(--line)"><b>整體評語：</b>${f.overall?esc(f.overall):'<span class="muted">（沒有填寫）</span>'}</div></div>`;
 }
 function viewMatrix(){
-  const u=S.user, g=u.group, mem=groupMembers(g), fin=DB.finals[g], done=mem.filter(s=>peerComplete(s.id)).length;
+  const u=S.user, g=u.group, mem=groupMembers(g), fin=DB.finals[g], done=mem.filter(s=>memberPeerDone(s.id)).length;
   return `<div class="page-head"><div><h2>第 ${g} 組全組評分彙整</h2><div class="sub">組內已評完 ${done} / ${mem.length} 人。組長會參考這張表，替七組打分並排名後送出。</div></div></div>
   ${peerOpen(g)?memberMatrix(g,{hiId:u.id})+`<h3 style="margin-top:24px">組員的第一名、最後一名理由</h3><div class="card" style="padding:0;overflow:auto"><table><tbody>${mem.map(s=>{const r=DB.reasons[s.id];return `<tr><td style="white-space:nowrap">${esc(s.name)}</td><td><span class="pill ok">第 ${r?.best?.g??"—"} 組</span> ${esc(r?.best?.text||"")}</td><td><span class="pill no">第 ${r?.worst?.g??"—"} 組</span> ${esc(r?.worst?.text||"")}</td></tr>`}).join("")}</tbody></table></div>`:lockedNote(g)}
   <h3 style="margin-top:24px">組長送出的小組評分</h3>
@@ -1197,10 +1200,10 @@ function bindGroupSubmit(){
 
 /* ================= 組長：組員繳交狀況 ================= */
 function reminderText(){
-  const u=S.user, mem=groupMembers(u.group), miss=mem.filter(s=>essayStatus(s.id)!=="submitted"), np=mem.filter(s=>!peerComplete(s.id));
+  const u=S.user, mem=groupMembers(u.group), miss=mem.filter(s=>essayStatus(s.id)!=="submitted"), np=mem.filter(s=>!memberPeerDone(s.id));
   let t=`【第 ${u.group} 組提醒】\n截止時間：${fmtTime(DB.settings.deadline)}\n`;
   if(miss.length) t+=`\n還沒交個人作業：${miss.map(s=>"@"+s.name).join(" ")}`;
-  if(np.length&&PEER()) t+=`\n還沒評完各組：${np.map(s=>"@"+s.name+`（${peerDone(s.id)}/7）`).join(" ")}`;
+  if(np.length&&PEER()) t+=`\n還沒評完各組：${np.map(s=>"@"+s.name+`（${memberPeerCount(s.id)}/7）`).join(" ")}`;
   if(!miss.length&&(!np.length||!PEER())) t+="\n大家都完成了，辛苦了！";
   return t+`\n\n繳交網址：https:\/\/（正式版的網址）`;
 }
@@ -1209,7 +1212,7 @@ function viewMembers(){
   return `<div class="page-head"><div><h2>第 ${g} 組組員狀況</h2><div class="sub">個人作業已交 ${done} / ${mem.length} 人</div></div><span class="spacer"></span>${countdown()}</div>
   <div class="card" style="padding:0;overflow:auto;margin-bottom:20px"><table>
     <thead><tr><th>姓名</th><th>個人作業</th><th>最後繳交</th>${PEER()?"<th>幫各組評分</th>":""}</tr></thead>
-    <tbody>${mem.map(s=>{const e=DB.essays[s.id],p=peerDone(s.id);return `<tr><td>${esc(s.name)}${s.leader?' <span class="pill lead">組長</span>':""}</td><td>${statusPill(s.id)}</td><td class="muted">${e?.v?fmtTime(e.at):"—"}</td>${PEER()?`<td>${peerComplete(s.id)?'<span class="pill ok">已評完</span>':p===7?'<span class="pill draft">差理由</span>':`<span class="pill ${p?"draft":"no"}">${p} / 7</span>`}</td>`:""}</tr>`}).join("")}</tbody></table></div>
+    <tbody>${mem.map(s=>{const e=DB.essays[s.id],p=memberPeerCount(s.id);return `<tr><td>${esc(s.name)}${s.leader?' <span class="pill lead">組長</span>':""}</td><td>${statusPill(s.id)}</td><td class="muted">${e?.v?fmtTime(e.at):"—"}</td>${PEER()?`<td>${memberPeerDone(s.id)?'<span class="pill ok">已評完</span>':p===7?'<span class="pill draft">差理由</span>':`<span class="pill ${p?"draft":"no"}">${p} / 7</span>`}</td>`:""}</tr>`}).join("")}</tbody></table></div>
   <div class="card"><div class="row"><h3 style="margin:0">傳到 LINE 群組的提醒</h3><span class="spacer"></span><button class="btn primary" id="cpLine">📋 複製提醒訊息</button></div>
   <div class="msgbox" id="lineMsg" style="margin-top:12px">${esc(reminderText())}</div></div>`;
 }
@@ -1380,8 +1383,6 @@ function bindUpload(){
 /* ================= 老師：首頁 ================= */
 const ungraded=()=>DB.students.filter(s=>essayStatus(s.id)==="submitted"&&!DB.tEssay[s.id]);
 // ================= 進度儀表板（像 WBS 一樣，把每項工作的完成度算成百分比） =================
-// 正式版學員拿不到組員的互評內容，所以組員是否完成改看後端給的 peerStatus
-const memberPeerDone=id=>DB.peerStatus?.[id]??peerComplete(id);
 const pctOf=items=>items.length?Math.round(items.reduce((a,x)=>a+(x.t?x.d/x.t:0),0)/items.length*100):0;
 function groupItems(g){
   const mem=groupMembers(g), n=mem.length, it=[{l:"個人反思心得",d:mem.filter(s=>essayStatus(s.id)==="submitted").length,t:n,u:"人"},{l:"上傳小組簡報",d:DB.pdfs[g]?1:0,t:1}];

@@ -111,10 +111,19 @@ ok(rowsOf("個人互評").some(r => String(r[0]) === "114900001" && r[4] === 88)
   const t1 = ctx.api("login", null, { id: "114900001", pw: "0900000001" }).token;
   const sn = ctx.api("refresh", t1, {}).snapshot;
   ok(!sn.peer["114900003"] && sn.peer["114900001"], "全組評完前，組長拿不到組員的互評內容（只拿到自己的）");
+  ok(sn.peerCount["114900003"] === 1 && sn.peerCount["114900001"] === 1 && !sn.peer["114900003"] && !JSON.stringify(sn.peerCount).includes("77"), "全組評完前，組長拿得到組員「評了幾組」的數字，但拿不到分數");
+  ok(Object.keys(sn.peerCount).every(id => csv.find(r => r[1] === id)[0] === "1"), "進度數字只有同組組員，沒有別組的人");
   const mem = csv.filter(r => +r[0] === 1);
   for (const m of mem) { const tk = ctx.api("login", null, { id: m[1], pw: m[4] }).token; for (const g of [1, 2, 3, 4, 5, 6, 7]) ctx.api("savePeer", tk, { g, score: 80 + g, comment: "" }); }
   const sn2 = ctx.api("refresh", t1, {}).snapshot;
   ok(!sn2.peer["114900003"] && sn2.peerStatus["114900003"] === false, "七組都評了但還沒寫理由，組長仍看不到（完成狀態是「未完成」）");
+  ok(mem.every(m => sn2.peerCount[m[1]] === 7), "組長拿到每個組員都評了 7 組");
+  await page.reload(); await page.waitForSelector(".who");
+  await page.click('[data-tab="members"]'); await page.waitForSelector("table");
+  const rowTxt = await page.$$eval("tbody tr", trs => trs.map(t => t.innerText));
+  const r3 = rowTxt.find(t => t.includes(mem.find(m => m[1] === "114900003")[2]));
+  ok(r3 && r3.includes("差理由") && !r3.includes("0 / 7"), "組員狀況表：全組評完前，組員評完七組會顯示「差理由」，不是 0 / 7");
+  ok(!(await page.innerText("#lineMsg")).includes("0/7"), "催評訊息不會把評完七組的組員寫成 0/7");
   ok(ctx.api("saveReasons", t3, { best: { g: 7, text: "" }, worst: { g: 1, text: "x" } }).error, "理由沒寫會被擋下");
   for (const m of mem) { const tk = ctx.api("login", null, { id: m[1], pw: m[4] }).token; ok(ctx.api("saveReasons", tk, { best: { g: 7, text: m[2] + "的第一名理由" }, worst: { g: 1, text: "最後一名理由" } }).ok, `${m[2]} 寫好第一名、最後一名理由`); }
   const sn3 = ctx.api("refresh", t1, {}).snapshot;

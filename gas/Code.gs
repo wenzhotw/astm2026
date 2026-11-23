@@ -399,9 +399,10 @@ function snapshot_(sess) {
   reasonRows.forEach(r => { rsn[String(r['評分人學號'])] = { best: { g: Number(r['第一名組']), text: String(r['第一名理由'] || '') }, worst: { g: Number(r['最後一名組']), text: String(r['最後一名理由'] || '') } }; });
   const complete = id => Object.keys(cnt[id] || {}).length === GROUPS.length && !!(rsn[id] && rsn[id].best.text && rsn[id].worst.text);
   const groupDone = !isT && R.filter(x => x.group === me.group).every(x => complete(x.id));
-  snap.reasons = {}; snap.peerStatus = {};
+  snap.reasons = {}; snap.peerStatus = {}; snap.peerCount = {};
   Object.keys(rsn).forEach(id => { if (isT || id === me.id || (groupDone && sameGroup(id))) snap.reasons[id] = rsn[id]; });
-  if (!isT) R.filter(x => x.group === me.group).forEach(x => { snap.peerStatus[x.id] = complete(x.id); });
+  // 同組組員的進度只給「是否評完」和「評了幾組」的數字，不含分數和評語，獨立評分照樣成立
+  if (!isT) R.filter(x => x.group === me.group).forEach(x => { snap.peerStatus[x.id] = complete(x.id); snap.peerCount[x.id] = Object.keys(cnt[x.id] || {}).length; });
   peerRows.forEach(r => {
     const id = String(r['評分人學號']);
     if (!isT && id !== me.id && !(groupDone && sameGroup(id))) return;
